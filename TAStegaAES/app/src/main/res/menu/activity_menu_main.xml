@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <group android:checkableBehavior="single">
+        <item
+            android:id="@+id/Encod"
+            android:icon="@android:drawable/ic_secure"
+            android:title="Encoding" />
+        <item
+            android:id="@+id/Decod"
+            android:icon="@android:drawable/ic_partial_secure"
+            android:title="Decoding" />
+    </group>
+
+    <item android:title="Other">
+        <menu>
+            <item
+                android:id="@+id/Help"
+                android:icon="@android:drawable/ic_menu_help"
+                android:title="Help" />
+        </menu>
+    </item>
+
+</menu>

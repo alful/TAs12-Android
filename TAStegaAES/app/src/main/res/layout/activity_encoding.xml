@@ -1,0 +1,142 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    tools:context=".encoding">
+
+    <ScrollView
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content">
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="20dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.0"
+        app:layout_constraintStart_toStartOf="parent"
+
+
+        app:layout_constraintVertical_bias="0.245">
+
+        <TextView
+            android:id="@+id/textView"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Encoding"
+            android:textColor="@color/black"
+            android:textSize="25sp"
+            android:layout_marginBottom="20dp"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintHorizontal_bias="0.0"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <Button
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="CHOOSE IMAGE"
+            android:id="@+id/ChooseImg"
+            android:clickable="true"
+            android:elegantTextHeight="false"
+            android:enabled="true"
+            android:longClickable="false"
+            android:layout_alignParentTop="true"
+            android:layout_alignParentLeft="true"
+            android:layout_alignParentStart="true" />
+
+        <ImageView
+            android:id="@+id/ivImageEncode"
+            android:layout_width="fill_parent"
+            android:layout_height="match_parent"
+            android:layout_above="@+id/TextEncode"
+
+            android:layout_below="@+id/ChooseImg"
+            android:layout_alignParentStart="true"
+            android:layout_alignParentLeft="true"
+            android:background="@android:drawable/alert_light_frame" />
+
+
+        <android.support.design.widget.TextInputLayout
+            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="5dp"
+            android:hint="Isi pesan">
+
+            <android.support.design.widget.TextInputEditText
+                android:id="@+id/TextEncode"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:drawablePadding="12dp"
+                android:autoText="false"
+                android:inputType="textMultiLine"
+                android:longClickable="true"
+                android:singleLine="false" />
+        </android.support.design.widget.TextInputLayout>
+
+        <android.support.design.widget.TextInputLayout
+            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="5dp"
+            android:hint="Key">
+
+            <android.support.design.widget.TextInputEditText
+                android:id="@+id/EncodeKey"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:drawablePadding="12dp"
+                android:autoText="false"
+                android:inputType="textMultiLine"
+                android:longClickable="true"
+                android:singleLine="false" />
+        </android.support.design.widget.TextInputLayout>
+
+
+
+        <Button
+            android:id="@+id/EncodeProc"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_alignParentStart="true"
+            android:layout_alignParentLeft="true"
+            android:layout_alignParentBottom="true"
+            android:clickable="true"
+            android:elegantTextHeight="false"
+            android:enabled="true"
+            android:longClickable="false"
+            android:text="ENCODING" />
+
+        <Button
+            android:id="@+id/EncodeOnly"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_alignParentStart="true"
+            android:layout_alignParentLeft="true"
+            android:layout_alignParentBottom="true"
+            android:clickable="true"
+            android:elegantTextHeight="false"
+            android:enabled="true"
+            android:longClickable="false"
+            android:text="Only Stegano" />
+        <Button
+            android:id="@+id/reset"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_alignParentStart="true"
+            android:layout_alignParentLeft="true"
+            android:layout_alignParentBottom="true"
+            android:clickable="true"
+            android:elegantTextHeight="false"
+            android:enabled="true"
+            android:longClickable="false"
+            android:text="Reset" />
+
+    </LinearLayout>
+    </ScrollView>
+    </LinearLayout>
