@@ -12,13 +12,13 @@
             android:title="Decoding" />
     </group>
 
-    <item android:title="Other">
-        <menu>
-            <item
-                android:id="@+id/Help"
-                android:icon="@android:drawable/ic_menu_help"
-                android:title="Help" />
-        </menu>
-    </item>
+<!--    <item android:title="Other">-->
+<!--        <menu>-->
+<!--            <item-->
+<!--                android:id="@+id/Help"-->
+<!--                android:icon="@android:drawable/ic_menu_help"-->
+<!--                android:title="Help" />-->
+<!--        </menu>-->
+<!--    </item>-->
 
 </menu>

@@ -38,38 +38,38 @@ public class Module {
         return hasil;
     }
 
-    public String binertostring(String psn1) { //mengubah dari binari ke string sekalian di embed dengan 0000000000
-
-        String pesan = psn1;
-        StringBuilder sb = new StringBuilder();
-        char[] chars = pesan.replaceAll("\\s", "").toCharArray();
-
-        int[] mapping = {1, 2, 4, 8, 16, 32, 64, 128};
-
-        for (int j = 0; j < chars.length; j += 8) { // j di tambah sebanyak 8 dan j kurang dari panjang pesan
-
-            int idx = 0;
-            int sum = 0;
-
-            for (int i = 7; i >= 0; i--) {
-                if (chars[i + j] == '1') {
-                    sum += mapping[idx];
-                }
-                idx++;
-            }
-
-            if (sum == 0 ){
-
-                j = chars.length;
-            }
-//            Log.d("TAG", "binertostring: "+sb.append(Character.toChars(sum)));
-
-//            sb.append(Character.toChars(sum).);
-            sb.append(Character.toChars(sum));
-        }
-
-        return sb.toString();
-    }
+//    public String binertostring(String psn1) { //mengubah dari binari ke string sekalian di embed dengan 0000000000
+//
+//        String pesan = psn1;
+//        StringBuilder sb = new StringBuilder();
+//        char[] chars = pesan.replaceAll("\\s", "").toCharArray();
+//
+//        int[] mapping = {1, 2, 4, 8, 16, 32, 64, 128};
+//
+//        for (int j = 0; j < chars.length; j += 8) { // j di tambah sebanyak 8 dan j kurang dari panjang pesan
+//
+//            int idx = 0;
+//            int sum = 0;
+//
+//            for (int i = 7; i >= 0; i--) {
+//                if (chars[i + j] == '1') {
+//                    sum += mapping[idx];
+//                }
+//                idx++;
+//            }
+//
+//            if (sum == 0 ){
+//
+//                j = chars.length;
+//            }
+////            Log.d("TAG", "binertostring: "+sb.append(Character.toChars(sum)));
+//
+////            sb.append(Character.toChars(sum).);
+//            sb.append(Character.toChars(sum));
+//        }
+//
+//        return sb.toString();
+//    }
 
     public String stringtobiner (String psn){ //mengubah dari string ke binary
 //        String hasil = "";

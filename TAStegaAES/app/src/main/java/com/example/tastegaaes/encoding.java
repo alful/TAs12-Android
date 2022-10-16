@@ -254,8 +254,8 @@ public class encoding extends AppCompatActivity implements View.OnClickListener 
         // as you specify a parent activity in AndroidManifest.xml.
         int id = item.getItemId();
         AlertDialog dialog = new AlertDialog.Builder(encoding.this)
-                .setTitle("Hasil Proses Encoding")
-                .setMessage("\n Status \t : " + status + " \n PSNR \t :  "+ d +"\n\n Stego Image Name : \n"+fname+"\n")
+                .setTitle("Hasil Encoding")
+                .setMessage("\n Status \t : " + status + " \n PSNR \t :  "+ d +"\n\n Stegano Image Name : \n"+fname+"\n")
                 .setPositiveButton("OK", new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface dialog, int which) {
@@ -460,16 +460,16 @@ public class encoding extends AppCompatActivity implements View.OnClickListener 
 //            return;
 //        }
 
-        ImageView localImageView = (ImageView) findViewById(R.id.ivImageEncode);
-        if (localImageView.getDrawable() == null) {
+        ImageView imageAsli = (ImageView) findViewById(R.id.ivImageEncode);
+        if (imageAsli.getDrawable() == null) {
             Toast.makeText(getApplicationContext(), "Please attach an image", Toast.LENGTH_LONG).show();
             status = "Please attach an image";
             //img kosong
             return;
         }
 
-        Bitmap localBitmap = ((BitmapDrawable) localImageView.getDrawable()).getBitmap();
-        Bitmap Cover_Image = localBitmap.copy(Bitmap.Config.ARGB_8888,true);
+        Bitmap bitmapAsli = ((BitmapDrawable) imageAsli.getDrawable()).getBitmap();
+        Bitmap Cover_Image = bitmapAsli.copy(Bitmap.Config.ARGB_8888,true);
 
         Module mod = new Module();
         String hasil = mod.stringtobiner(output).concat("00000000000000000000"); // ubah pesan ke binary dan di tambahakn enol di belakgannya
@@ -496,8 +496,8 @@ public class encoding extends AppCompatActivity implements View.OnClickListener 
         }
 
         else{
-            Bitmap Stego_Image = insertMessage(hasil); // masuk ke metthod insert message
-            Log.d("TAG", "insertsdhdsa: "+insertMessage(hasil));
+            Bitmap Stego_Image = masukkanPesan(hasil); // masuk ke metthod insert message
+            Log.d("TAG", "insertsdhdsa: "+masukkanPesan(hasil));
             SaveImage(Stego_Image,mods);
             d = mod.hitungPSNR(Cover_Image, Stego_Image); //menghitung PSNR
             psnrs=d;
@@ -568,34 +568,34 @@ public class encoding extends AppCompatActivity implements View.OnClickListener 
         }
     }
 
-    private Bitmap insertMessage(String encryptedMessage) {
+    private Bitmap masukkanPesan(String pesan) {
 
         //simpan pesan ke pixel lsb
         ImageView ivLoadImg = (ImageView) findViewById(R.id.ivImageEncode);
-        Bitmap bi2 = ((BitmapDrawable)ivLoadImg.getDrawable()).getBitmap();
+        Bitmap bit2 = ((BitmapDrawable)ivLoadImg.getDrawable()).getBitmap();
         //mengcopy bitmap dengan spesifikasi setiap pixel disimpan dalam 4 bytes
-        Bitmap bi1 = bi2.copy(Bitmap.Config.ARGB_8888,true);
+        Bitmap bit1 = bit2.copy(Bitmap.Config.ARGB_8888,true);
 
 
         int a,b;
 
-        if (bi1.getHeight()<pixel)
-        {a = bi1.getHeight();}
+        if (bit1.getHeight()<pixel)
+        {a = bit1.getHeight();}
         else {a = pixel;}
 
-        if (bi1.getWidth()<pixel){b = bi1.getWidth();}
+        if (bit1.getWidth()<pixel){b = bit1.getWidth();}
         else {b = pixel;}
 
         Module mod = new Module();
         int charIndex = 0;
         String r3, g3, b3;
-        int pjgpesan = encryptedMessage.length();
+        int pjgpesan = pesan.length();
 
         for (int i = 0; i < a; i++) {
             // pass through each row
             for (int j = 0; j < b; j++) {
                 // holds the pixel that is currently being processed
-                int pixel = bi1.getPixel(j, i);
+                int pixel = bit1.getPixel(j, i);
                 // Mengubag semua nilai pixel Lsb menjadi 0
                 int A = (pixel >> 24) & 0xff;
                 int R = (pixel >> 16) & 0xff;
@@ -614,7 +614,7 @@ public class encoding extends AppCompatActivity implements View.OnClickListener 
 
                 //red
                 if (charIndex < pjgpesan) {
-                    String PesanR = encryptedMessage.substring(charIndex, charIndex + 2); // index 0, 1 alias indeks ke - 0;
+                    String PesanR = pesan.substring(charIndex, charIndex + 2); // index 0, 1 alias indeks ke - 0;
                     Log.d("TAG", "insertMessagePesanR: "+PesanR);
                     if ( Integer.valueOf(PesanR) == 01) {
                         r3 = r2.concat("01"); //mengganti bit paling belakang menjadi 1
@@ -635,7 +635,7 @@ public class encoding extends AppCompatActivity implements View.OnClickListener 
 
                 //green
                 if (charIndex<pjgpesan) {
-                    String PesanG = encryptedMessage.substring(charIndex, charIndex + 2); // lnjut dari index atasnya
+                    String PesanG = pesan.substring(charIndex, charIndex + 2); // lnjut dari index atasnya
                     Log.d("TAG", "insertMessagePesanG: "+PesanG);
                     if ( Integer.valueOf(PesanG) == 01) {
                         g3 = g2.concat("01");
@@ -656,7 +656,7 @@ public class encoding extends AppCompatActivity implements View.OnClickListener 
 
                 //blue
                 if (charIndex<pjgpesan){
-                    String PesanB = encryptedMessage.substring(charIndex, charIndex + 2); // lnjut dari index atasnya
+                    String PesanB = pesan.substring(charIndex, charIndex + 2); // lnjut dari index atasnya
                     Log.d("TAG", "insertMessagePesanB: "+PesanB);
                     if ( Integer.valueOf(PesanB) == 01) {
                         b3 = b2.concat("01");
@@ -676,15 +676,15 @@ public class encoding extends AppCompatActivity implements View.OnClickListener 
                 }
 
                 if (charIndex>=pjgpesan){
-                    return bi1;
+                    return bit1;
                 }
 
                 int rgba = (A<<24)|(R<<16)|(G<<8)|(B); //gabungkan 3  komponen warna
-                bi1.setPixel(j, i, rgba); //settting pixel baru
+                bit1.setPixel(j, i, rgba); //settting pixel baru
 
             }
         }
-        return bi1;
+        return bit1;
     }
 
     private void scanMedia(File paramFile) {
