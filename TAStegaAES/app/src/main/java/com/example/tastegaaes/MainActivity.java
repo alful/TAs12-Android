@@ -64,7 +64,7 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
         int id = item.getItemId();
 
         AlertDialog dialog = new AlertDialog.Builder(MainActivity.this)
-                .setTitle("Contact Person")
+                .setTitle("Detail")
                 .setMessage("\n Name \t    :   Muhammad Alful Falakh   \n" +
                         " Phone \t    :   (+62)851-5681-7452  \n Email \t    :   alfulfalakh@gmail.com  \n")
                 .setPositiveButton("OK", new DialogInterface.OnClickListener() {
@@ -95,18 +95,19 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
     public boolean onNavigationItemSelected(MenuItem item) {
         int id = item.getItemId();
 
-        if (id == R.id.Encod) {
+        if (id == R.id.Encods) {
 
             Intent intent = new Intent(this, encoding.class);
             startActivity(intent);
 
         }
-        else if (id == R.id.Decod) {
+        else if (id == R.id.Decods) {
 
             Intent intent1  = new Intent(this, decoding.class);
             startActivity(intent1);
 
         }
+
 
         DrawerLayout drawer = (DrawerLayout) findViewById(R.id.lay_draw);
         drawer.closeDrawer(GravityCompat.START);

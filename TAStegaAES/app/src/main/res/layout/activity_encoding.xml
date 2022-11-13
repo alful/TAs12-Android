@@ -14,14 +14,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:padding="20dp"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.0"
-        app:layout_constraintStart_toStartOf="parent"
-
-
-        app:layout_constraintVertical_bias="0.245">
+        android:padding="20dp">
 
         <TextView
             android:id="@+id/textView"
@@ -30,11 +23,7 @@
             android:text="Encoding"
             android:textColor="@color/black"
             android:textSize="25sp"
-            android:layout_marginBottom="20dp"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintHorizontal_bias="0.0"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent" />
+            android:layout_marginBottom="20dp"/>
 
         <Button
             android:layout_width="match_parent"
@@ -44,10 +33,7 @@
             android:clickable="true"
             android:elegantTextHeight="false"
             android:enabled="true"
-            android:longClickable="false"
-            android:layout_alignParentTop="true"
-            android:layout_alignParentLeft="true"
-            android:layout_alignParentStart="true" />
+            android:longClickable="false" />
 
         <ImageView
             android:id="@+id/ivImageEncode"
@@ -103,34 +89,26 @@
             android:id="@+id/EncodeProc"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_alignParentStart="true"
-            android:layout_alignParentLeft="true"
-            android:layout_alignParentBottom="true"
             android:clickable="true"
             android:elegantTextHeight="false"
             android:enabled="true"
             android:longClickable="false"
-            android:text="ENCODING" />
+            android:text="EMBEDDING" />
 
         <Button
             android:id="@+id/EncodeOnly"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_alignParentStart="true"
-            android:layout_alignParentLeft="true"
-            android:layout_alignParentBottom="true"
             android:clickable="true"
             android:elegantTextHeight="false"
             android:enabled="true"
             android:longClickable="false"
+            android:visibility="gone"
             android:text="Only Stegano" />
         <Button
             android:id="@+id/reset"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_alignParentStart="true"
-            android:layout_alignParentLeft="true"
-            android:layout_alignParentBottom="true"
             android:clickable="true"
             android:elegantTextHeight="false"
             android:enabled="true"

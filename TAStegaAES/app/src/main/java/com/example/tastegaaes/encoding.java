@@ -4,13 +4,16 @@ import android.app.AlertDialog;
 import android.app.ProgressDialog;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.drawable.BitmapDrawable;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Environment;
 import android.provider.MediaStore;
+import android.provider.OpenableColumns;
 import android.support.annotation.Nullable;
 import android.support.annotation.RequiresApi;
 import android.support.v7.app.AppCompatActivity;
@@ -26,9 +29,12 @@ import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -41,6 +47,8 @@ import javax.crypto.Cipher;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
 
+import id.zelory.compressor.Compressor;
+
 public class encoding extends AppCompatActivity implements View.OnClickListener {
 
 //    public static final int IMAGE_PICK = 2;
@@ -49,12 +57,17 @@ public class encoding extends AppCompatActivity implements View.OnClickListener 
     String status = "-";
     String fname = "";
     Double d = 0.0;
-    int pixel = 100;
+    Double psn_r = 0.0;
+    int pixel = 150;
     String AES = "AES";
     String output;
     String hsls;
     DataHelper dbHelper;
     int mods=0;
+    String fasname="";
+
+    File original,compressImage;
+    String pathsd="",namaasli="";
 
     long starttume,endtime,duration;
     Double akhir,psnrs;
@@ -80,6 +93,8 @@ public class encoding extends AppCompatActivity implements View.OnClickListener 
 
         EditText txtStatus = (EditText)findViewById(R.id.TextEncode);
 //        final TextView lblCount = (TextView)findViewById(R.id.tv_char);
+
+
 
         getSupportActionBar().setDisplayHomeAsUpEnabled(true);
         getSupportActionBar().setTitle("Process Encryption");
@@ -134,7 +149,22 @@ public class encoding extends AppCompatActivity implements View.OnClickListener 
             case R.id.EncodeOnly: //di klik menuju encode proses
                 mods=2;
                 try {
+                    starttume=0;
+                    endtime=0;
+                    duration=0;
+                    akhir=null;
+                    psnrs=null;
+                    kunci="";
+                    path="";
+                    pltext="";
+                    fname="";
+                    starttume=System.nanoTime();
                     Encodeprocessing(mods);
+                    endtime=System.nanoTime();
+                    duration=endtime-starttume;
+                    akhir=(double) duration/1000000000;
+                    dbHelper.addEncodeOnly(path,fname,pltext,psnrs,akhir);
+
                 } catch (NoSuchAlgorithmException e) {
                     e.printStackTrace();
                 } catch (UnsupportedEncodingException e) {
@@ -255,7 +285,7 @@ public class encoding extends AppCompatActivity implements View.OnClickListener 
         int id = item.getItemId();
         AlertDialog dialog = new AlertDialog.Builder(encoding.this)
                 .setTitle("Hasil Encoding")
-                .setMessage("\n Status \t : " + status + " \n PSNR \t :  "+ d +"\n\n Stegano Image Name : \n"+fname+"\n")
+                .setMessage("\n Status \t : " + status + " \n MSE \t :  "+ d +" \n PSNR \t :  "+ psn_r +"\n\n Stegano Image Name : \n"+fname+"\n")
                 .setPositiveButton("OK", new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface dialog, int which) {
@@ -278,10 +308,38 @@ public class encoding extends AppCompatActivity implements View.OnClickListener 
         if (requestCode == RESULT_LOAD_IMG && resultCode == RESULT_OK && data != null && data.getData() != null) {
             Uri uri = data.getData();
 
+            String apath=uri.getLastPathSegment();
+            pathsd=uri.getLastPathSegment();
+            if (uri.getScheme().equals("content")) {
+                Cursor cursor = getContentResolver().query(uri, null, null, null, null);
+                try {
+                    if (cursor != null && cursor.moveToFirst()) {
+                        namaasli=cursor.getString(cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME));
+                        fasname = cursor.getString(cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME));
+                    }
+                } finally {
+                    cursor.close();
+                }
+            }
+            if (fasname == null) {
+                fasname = uri.getPath();
+                namaasli=uri.getPath();
+                int cut = fasname.lastIndexOf('/');
+                int cuts=namaasli.lastIndexOf('/');
+                if (cut != -1) {
+                    fasname = fasname.substring(cut + 1);
+                    namaasli=namaasli.substring(cuts+1);
+                }
+            }
             try {
+
+                InputStream imagestream=getContentResolver().openInputStream(uri);
                 Bitmap bitmap = MediaStore.Images.Media.getBitmap(getContentResolver(), uri);
+                Bitmap selectimg=BitmapFactory.decodeStream(imagestream);
                 ImageView imageView = (ImageView) findViewById(R.id.ivImageEncode);
                 imageView.setImageBitmap(bitmap);
+
+                original=new File(uri.getPath().replace("raw",""));
                 Toast.makeText(this, "Image Selected", Toast.LENGTH_SHORT).show();
                 status = "Image Selected";
             }
@@ -305,6 +363,7 @@ public class encoding extends AppCompatActivity implements View.OnClickListener 
             aes AES= new aes();
 
         String pesan = txtPesan.getText().toString();
+        pltext = pesan;
 
         byte[] dataBytes = new byte[1024];
 
@@ -315,12 +374,12 @@ public class encoding extends AppCompatActivity implements View.OnClickListener 
             return;
         }
 
-        if (pesan == "") {
+        if (pesan.matches("")) {
             Toast.makeText(getApplicationContext(), "Please write a message", Toast.LENGTH_LONG).show();
             status = "Please write a message";
             return;
         }
-        if (keys == "") {
+        if (keys.matches("")) {
             Toast.makeText(getApplicationContext(), "Please write a key", Toast.LENGTH_LONG).show();
             status = "Please write a key";
             return;
@@ -332,13 +391,14 @@ public class encoding extends AppCompatActivity implements View.OnClickListener 
             return;
         }
 
+
         if (mods!=2) {
 
 
             try {
                 MessageDigest digest = MessageDigest.getInstance(SHA);
 //            digest.update(keys.getBytes());// baris 330 -331 sama artinya dengan baris ini
-                dataBytes = AES.static_stringToByteArray(keys);
+                dataBytes = AES.StringkeByteArray(keys);
                 digest.update(dataBytes, 0, dataBytes.length);
 //            Log.d("TAG", "hasil: "+AES.static_stringToByteArray(textkey));
 //            Log.d("TAG", "hasilupdat: "+dataBytes);
@@ -358,12 +418,24 @@ public class encoding extends AppCompatActivity implements View.OnClickListener 
                 System.out.println("sdad" + hextoString.toString());
 
 
+                //key hashing
+                String res = "";
+                StringBuffer sb = new StringBuffer();
+                for(int i=0; i<mdbytes.length; i++) {
+
+                    int n = (int) mdbytes[i];
+
+                    if(n<0) n += 256;
+                    sb.append((char) n);
+                }
+                res = sb.toString();
+                System.out.println("hasiasdasdl: "+res);
+
                 Log.d("TAG", "hasilas: " + mdbytes);
                 Log.d("TAG", "hasilas: " + mdbytes.length);
                 output = AES.Encrypt(pesan);
                 kunci = hextoString.toString();
 
-                pltext = pesan;
                 chiper = output;
 
                 Log.d("TAG", "startEncruptd: " + output);
@@ -372,9 +444,7 @@ public class encoding extends AppCompatActivity implements View.OnClickListener 
             } catch (NoSuchAlgorithmException e) {
                 e.printStackTrace();
             }
-        }
-
-        else
+        } else
         {
             output=pesan;
         }
@@ -421,34 +491,34 @@ public class encoding extends AppCompatActivity implements View.OnClickListener 
 
 //        hsls = android.util.Base64.encodeToString(hsls, android.util.Base64.DEFAULT );
 
-        aes aes2=new aes();
+//        aes aes2=new aes();
 
 
 
-        try {
-//            output=encrypt(pesan,keys);
-
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-//        String de= AES.Decrypt(output);
-        Log.d("TAG", "hasil: "+output);
-//        Log.d("TAG", "hasil: "+de);
-
-        MessageDigest digest=null;
-        try {
-            digest = MessageDigest.getInstance("SHA-256");
-        } catch (NoSuchAlgorithmException e1) {
-            // TODO Auto-generated catch block
-            e1.printStackTrace();
-        }
-        digest.reset();
-        try {
-            Log.i("Eamorr",digest.digest(keys.getBytes("UTF-8")).toString());
-        } catch (UnsupportedEncodingException e) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
-        }
+//        try {
+////            output=encrypt(pesan,keys);
+//
+//        } catch (Exception e) {
+//            e.printStackTrace();
+//        }
+////        String de= AES.Decrypt(output);
+//        Log.d("TAG", "hasil: "+output);
+////        Log.d("TAG", "hasil: "+de);
+//
+//        MessageDigest digest=null;
+//        try {
+//            digest = MessageDigest.getInstance("SHA-256");
+//        } catch (NoSuchAlgorithmException e1) {
+//            // TODO Auto-generated catch block
+//            e1.printStackTrace();
+//        }
+//        digest.reset();
+//        try {
+//            Log.i("Eamorr",digest.digest(keys.getBytes("UTF-8")).toString());
+//        } catch (UnsupportedEncodingException e) {
+//            // TODO Auto-generated catch block
+//            e.printStackTrace();
+//        }
 
 //        Log.d("TAG", "hasiasdasdasl: "+de);
 
@@ -469,6 +539,16 @@ public class encoding extends AppCompatActivity implements View.OnClickListener 
         }
 
         Bitmap bitmapAsli = ((BitmapDrawable) imageAsli.getDrawable()).getBitmap();
+
+        try {
+            compressImage=new Compressor(encoding.this).setDestinationDirectoryPath(pathsd).setQuality(90).setCompressFormat(Bitmap.CompressFormat.PNG).compressToFile(original);
+            File Final=new File(pathsd,original.getName());
+            Bitmap hasli=BitmapFactory.decodeFile(Final.getAbsolutePath());
+            imageAsli.setImageBitmap(hasli);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        bitmapAsli = ((BitmapDrawable) imageAsli.getDrawable()).getBitmap();
         Bitmap Cover_Image = bitmapAsli.copy(Bitmap.Config.ARGB_8888,true);
 
         Module mod = new Module();
@@ -479,7 +559,8 @@ public class encoding extends AppCompatActivity implements View.OnClickListener 
         int pjg_hasil = output.length();
         int total_lsb = mod.sumlsb(Cover_Image);
 //        Log.d("TAG", "pjg hsl: "+pjg_hasil);
-//        Log.d("TAG", "totallsb: "+total_lsb);
+        Log.d("TAG", "totallsb: "+total_lsb);
+        Log.d("TAG", "totallsb: "+Cover_Image.getHeight()+" : "+Cover_Image.getWidth());
 
 
         if (Cover_Image == null) {
@@ -496,12 +577,13 @@ public class encoding extends AppCompatActivity implements View.OnClickListener 
         }
 
         else{
-            Bitmap Stego_Image = masukkanPesan(hasil); // masuk ke metthod insert message
+            Bitmap Stego_Image = masukkanPesan(hasil); // masuk ke insert message
             Log.d("TAG", "insertsdhdsa: "+masukkanPesan(hasil));
             SaveImage(Stego_Image,mods);
-            d = mod.hitungPSNR(Cover_Image, Stego_Image); //menghitung PSNR
-            psnrs=d;
-            Toast.makeText(getApplicationContext(), "Image Saved :  " + fname+" PSNR : " +d, Toast.LENGTH_LONG).show();
+            d = mod.hitungMSE(Cover_Image, Stego_Image); //menghitung PSNR
+            psn_r=mod.hitungPSNR(d);
+            psnrs=psn_r;
+            Toast.makeText(getApplicationContext(), "Image Save :  " + fname+" PSNR : " +psn_r, Toast.LENGTH_LONG).show();
             //startActivity(new Intent(this, MainActivity.class));
             status = "encoding berhasil";
 
@@ -531,9 +613,7 @@ public class encoding extends AppCompatActivity implements View.OnClickListener 
 
 
     public void SaveImage(Bitmap paramBitmap,int modsa) {
-//        String pth= "/storage/emulated/0";
-//        File roots=new File(pth+"/SteganoAES");
-//        roots.mkdir();
+
         File localFile1;
 
         if (modsa != 2)
@@ -548,7 +628,7 @@ public class encoding extends AppCompatActivity implements View.OnClickListener 
         path=ph;
         Log.d("TAG", "SaveImage: "+ph);
         Random generator = new Random();
-        int n = 10000;
+        int n = 1000;
         n = generator.nextInt(n);
         fname = "Data-" + n + ".jpg";
         File localFile2 = new File(localFile1, fname);
@@ -560,7 +640,11 @@ public class encoding extends AppCompatActivity implements View.OnClickListener 
 
         try {
             FileOutputStream out = new FileOutputStream(localFile2);
-            paramBitmap.compress(Bitmap.CompressFormat.PNG, 100, out);
+
+            paramBitmap.compress(Bitmap.CompressFormat.PNG, 90, out);
+//            Log.e("Dimensions", paramBitmap.getWidth()+" "+paramBitmap.getHeight());
+//            Log.e("Dimensions", paramBitmap.getDensity()+" "+paramBitmap.getByteCount());
+
             out.flush();
             out.close();
         } catch (Exception e) {
@@ -579,24 +663,19 @@ public class encoding extends AppCompatActivity implements View.OnClickListener 
 
         int a,b;
 
-        if (bit1.getHeight()<pixel)
-        {a = bit1.getHeight();}
-        else {a = pixel;}
 
-        if (bit1.getWidth()<pixel){b = bit1.getWidth();}
-        else {b = pixel;}
-
+        a=bit1.getHeight();
+        b=bit1.getWidth();
         Module mod = new Module();
         int charIndex = 0;
         String r3, g3, b3;
         int pjgpesan = pesan.length();
 
         for (int i = 0; i < a; i++) {
-            // pass through each row
             for (int j = 0; j < b; j++) {
                 // holds the pixel that is currently being processed
                 int pixel = bit1.getPixel(j, i);
-                // Mengubag semua nilai pixel Lsb menjadi 0
+                // mengambil rgb
                 int A = (pixel >> 24) & 0xff;
                 int R = (pixel >> 16) & 0xff;
                 int G = (pixel >> 8) & 0xff;
@@ -605,81 +684,129 @@ public class encoding extends AppCompatActivity implements View.OnClickListener 
                 String g1 = Integer.toBinaryString(G);
                 String b1 = Integer.toBinaryString(B);
 
-                String rr = mod.binertoeightbiner(r1);//menjadi binari dengan pjg 8
-                String r2 = rr.substring(0, 6); // mengambil bilai sebanyak 7 dari 8
+//                String rr = mod.binertoeightbiner(r1);//menjadi binary dengan pjg 8
+//                String r2 = rr.substring(0, 6); // mengambil bilai sebanyak 7 dari 8
+//                String gg = mod.binertoeightbiner(g1);
+//                String g2 = gg.substring(0, 6);
+//                String bb = mod.binertoeightbiner(b1);
+//                String b2 = bb.substring(0, 6);
+
+
+                String rr = mod.binertoeightbiner(r1);//menjadi binary dengan pjg 8
+                String r2 = rr.substring(0, 7); // mengambil bilai sebanyak 7 dari 8
                 String gg = mod.binertoeightbiner(g1);
-                String g2 = gg.substring(0, 6);
+                String g2 = gg.substring(0, 7);
                 String bb = mod.binertoeightbiner(b1);
-                String b2 = bb.substring(0, 6);
+                String b2 = bb.substring(0, 7);
 
                 //red
                 if (charIndex < pjgpesan) {
-                    String PesanR = pesan.substring(charIndex, charIndex + 2); // index 0, 1 alias indeks ke - 0;
+                    String PesanR = pesan.substring(charIndex, charIndex + 1); // index 0, 1 alias indeks ke - 0;
                     Log.d("TAG", "insertMessagePesanR: "+PesanR);
-                    if ( Integer.valueOf(PesanR) == 01) {
-                        r3 = r2.concat("01"); //mengganti bit paling belakang menjadi 1
-                    }
-                    else if( Integer.valueOf(PesanR) == 11) {
-                        r3 = r2.concat("11"); //mengganti bit paling belakang menjadi 1
-                    }
-                    else if( Integer.valueOf(PesanR) == 10) {
-                        r3 = r2.concat("10"); //mengganti bit paling belakang menjadi 1
+                    if ( Integer.valueOf(PesanR) == 1) {
+                        r3 = r2.concat("1"); //mengganti bit belakang menjadi 1
                     }
                     else{
-                        r3 = r2.concat("00"); //mengganti bit paling belaka menjadi 0
+                        r3 = r2.concat("0"); //mengganti bit belaka menjadi 0
                     }
                     R = mod.binertointeger(r3); // nilai pixel R baru
                     charIndex++; // char index di tambah sebanyak 1
-                    charIndex++;
                 }
-
+                //red
+//                if (charIndex < pjgpesan) {
+//                    String PesanR = pesan.substring(charIndex, charIndex + 2); // index 0, 1 alias indeks ke - 0;
+//                    Log.d("TAG", "insertMessagePesanR: "+PesanR);
+//                    if ( Integer.valueOf(PesanR) == 01) {
+//                        r3 = r2.concat("01"); //mengganti bit belakang menjadi 01
+//                    }
+//                    else if( Integer.valueOf(PesanR) == 11) {
+//                        r3 = r2.concat("11"); //mengganti bit belakang menjadi 11
+//                    }
+//                    else if( Integer.valueOf(PesanR) == 10) {
+//                        r3 = r2.concat("10"); //mengganti bit belakang menjadi 10
+//                    }
+//                    else{
+//                        r3 = r2.concat("00"); //mengganti bit belaka menjadi 00
+//                    }
+//                    R = mod.binertointeger(r3); // nilai pixel R baru
+//                    charIndex++; // char index di tambah sebanyak 1
+//                    charIndex++;
+//                }
                 //green
                 if (charIndex<pjgpesan) {
-                    String PesanG = pesan.substring(charIndex, charIndex + 2); // lnjut dari index atasnya
+                    String PesanG = pesan.substring(charIndex, charIndex + 1); // lnjut dari index atasnya
                     Log.d("TAG", "insertMessagePesanG: "+PesanG);
-                    if ( Integer.valueOf(PesanG) == 01) {
-                        g3 = g2.concat("01");
-                    }
-                    else if( Integer.valueOf(PesanG) == 11) {
-                        g3 = g2.concat("11"); //mengganti bit paling belakang menjadi 1
-                    }
-                    else if( Integer.valueOf(PesanG) == 10) {
-                        g3 = g2.concat("10"); //mengganti bit paling belakang menjadi 1
+                    if ( Integer.valueOf(PesanG) == 1) {
+                        g3 = g2.concat("1");
                     }
                     else{
-                        g3 = g2.concat("00");
+                        g3 = g2.concat("0");
                     }
                     G = mod.binertointeger(g3);
                     charIndex++; //char index di tambah sebanyak 1
-                    charIndex++;
                 }
+
+//                //green
+//                if (charIndex<pjgpesan) {
+//                    String PesanG = pesan.substring(charIndex, charIndex + 2); // lnjut dari index atasnya
+//                    Log.d("TAG", "insertMessagePesanG: "+PesanG);
+//                    if ( Integer.valueOf(PesanG) == 01) {
+//                        g3 = g2.concat("01");
+//                    }
+//                    else if( Integer.valueOf(PesanG) == 11) {
+//                        g3 = g2.concat("11"); //mengganti bit paling belakang menjadi 1
+//                    }
+//                    else if( Integer.valueOf(PesanG) == 10) {
+//                        g3 = g2.concat("10"); //mengganti bit paling belakang menjadi 1
+//                    }
+//                    else{
+//                        g3 = g2.concat("00");
+//                    }
+//                    G = mod.binertointeger(g3);
+//                    charIndex++; //char index di tambah sebanyak 1
+//                    charIndex++;
+//                }
 
                 //blue
                 if (charIndex<pjgpesan){
-                    String PesanB = pesan.substring(charIndex, charIndex + 2); // lnjut dari index atasnya
+                    String PesanB = pesan.substring(charIndex, charIndex + 1); // lanjut dari index atasnya
                     Log.d("TAG", "insertMessagePesanB: "+PesanB);
-                    if ( Integer.valueOf(PesanB) == 01) {
-                        b3 = b2.concat("01");
-                    }
-                    else if( Integer.valueOf(PesanB) == 11) {
-                        b3 = b2.concat("11"); //mengganti bit paling belakang menjadi 1
-                    }
-                    else if( Integer.valueOf(PesanB) == 10) {
-                        b3 = b2.concat("10"); //mengganti bit paling belakang menjadi 1
+                    if ( Integer.valueOf(PesanB) == 1) {
+                        b3 = b2.concat("1");
                     }
                     else{
-                        b3 = b2.concat("00");
+                        b3 = b2.concat("0");
                     }
                     B = mod.binertointeger(b3);
                     charIndex++; //char index di tambah sebanyak 1
-                    charIndex++;
                 }
+
+//                //blue
+//                if (charIndex<pjgpesan){
+//                    String PesanB = pesan.substring(charIndex, charIndex + 2); // lanjut dari index atasnya
+//                    Log.d("TAG", "insertMessagePesanB: "+PesanB);
+//                    if ( Integer.valueOf(PesanB) == 01) {
+//                        b3 = b2.concat("01");
+//                    }
+//                    else if( Integer.valueOf(PesanB) == 11) {
+//                        b3 = b2.concat("11");
+//                    }
+//                    else if( Integer.valueOf(PesanB) == 10) {
+//                        b3 = b2.concat("10");
+//                    }
+//                    else{
+//                        b3 = b2.concat("00");
+//                    }
+//                    B = mod.binertointeger(b3);
+//                    charIndex++; //char index di tambah sebanyak 1
+//                    charIndex++;
+//                }
 
                 if (charIndex>=pjgpesan){
                     return bit1;
                 }
 
-                int rgba = (A<<24)|(R<<16)|(G<<8)|(B); //gabungkan 3  komponen warna
+                int rgba = (A<<24)|(R<<16)|(G<<8)|(B); //menggabungkan 3  komponen warna
                 bit1.setPixel(j, i, rgba); //settting pixel baru
 
             }
@@ -691,24 +818,24 @@ public class encoding extends AppCompatActivity implements View.OnClickListener 
         sendBroadcast(new Intent("android.intent.action.MEDIA_SCANNER_SCAN_FILE", Uri.fromFile(paramFile)));
     }
 
-    private String encrypt (String Data, String password) throws Exception{
-        SecretKey key = generateKey(password);
-        Cipher c = Cipher.getInstance(AES);
-        c.init(Cipher.ENCRYPT_MODE,key);
-        byte[]  encVal = c.doFinal(Data.getBytes());
-        String encryptedValue = android.util.Base64.encodeToString(encVal, android.util.Base64.DEFAULT );
-        return encryptedValue;
+//    private String encrypt (String Data, String password) throws Exception{
+//        SecretKey key = generateKey(password);
+//        Cipher c = Cipher.getInstance(AES);
+//        c.init(Cipher.ENCRYPT_MODE,key);
+//        byte[]  encVal = c.doFinal(Data.getBytes());
+//        String encryptedValue = android.util.Base64.encodeToString(encVal, android.util.Base64.DEFAULT );
+//        return encryptedValue;
+//
+//    }
 
-    }
-
-    private SecretKeySpec generateKey(String password) throws Exception {
-        final MessageDigest digest = MessageDigest.getInstance("SHA-256");
-        byte[] bytes = password.getBytes("UTF-8");
-        digest.update(bytes, 0, bytes.length);
-        byte[] key = digest.digest();
-        SecretKeySpec secretKeySpec = new SecretKeySpec(key, "AES");
-        return  secretKeySpec;
-    }
+//    private SecretKeySpec generateKey(String password) throws Exception {
+//        final MessageDigest digest = MessageDigest.getInstance("SHA-256");
+//        byte[] bytes = password.getBytes("UTF-8");
+//        digest.update(bytes, 0, bytes.length);
+//        byte[] key = digest.digest();
+//        SecretKeySpec secretKeySpec = new SecretKeySpec(key, "AES");
+//        return  secretKeySpec;
+//    }
 
 
 }

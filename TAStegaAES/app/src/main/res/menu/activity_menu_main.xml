@@ -3,22 +3,16 @@
 
     <group android:checkableBehavior="single">
         <item
-            android:id="@+id/Encod"
+            android:id="@+id/Encods"
             android:icon="@android:drawable/ic_secure"
-            android:title="Encoding" />
+            android:title="Embedding" />
         <item
-            android:id="@+id/Decod"
+            android:id="@+id/Decods"
             android:icon="@android:drawable/ic_partial_secure"
-            android:title="Decoding" />
+            android:title="Extraction" />
+
     </group>
 
-<!--    <item android:title="Other">-->
-<!--        <menu>-->
-<!--            <item-->
-<!--                android:id="@+id/Help"-->
-<!--                android:icon="@android:drawable/ic_menu_help"-->
-<!--                android:title="Help" />-->
-<!--        </menu>-->
-<!--    </item>-->
+
 
 </menu>

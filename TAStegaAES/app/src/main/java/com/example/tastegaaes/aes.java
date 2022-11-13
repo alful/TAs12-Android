@@ -9,914 +9,38 @@ import java.util.Base64;
 
 public class aes {
 
-    /** specify whether diagnostic trace output is required.
-     *  <p>
-     *  Available levels are:<br>
-     *  0: no trace info is generated<br>
-     *  1: trace major calls with params (setKey, encrypt, decrypt)<br>
-     *  2: + trace round values whilst en/decrypting<br>
-     *  3: + trace all steps within each round<br>
-     *  4: + trace subkey generation<br>
-     *  5: + trace static table values<br>
-     */
-    public int traceLevel = 0;
 
-    /** string which accumulates diagnostic output for display.
-     *  <p>
-     *  Contents are reset on each major call (setKey, encrypt, decrypt)
-     *  and should be used after each of these calls returns for display.
-     */
-    public String traceInfo = "";
-
-    /** AES constants and variables. */
-    public static final int
-            ROUNDS = 14,        // AES has 10-14 rounds
-            BLOCK_SIZE = 16,    // AES uses 128-bit (16 byte) key
-            KEY_LENGTH = 32;    // AES uses 128/192/256-bit (16/24/32 byte) key
-
-    // Define key attributes for current AES instance
-    /** number of rounds used given AES key set on this instance. */
-    int numRounds;
-    /** encryption round keys derived from AES key set on this instance. */
-    byte[][] Ke;
-    /** decryption round keys derived from AES key set on this instance. */
-    byte[][] Kd;
-
-    /** AES encryption S-box.
-     *  <p>See FIPS-197 section 5.1.1 or Stallings section 5.2.
-     *  Note that hex values have been converted to decimal for easy table
-     *  specification in Java.
-     */
-    static final byte[] S = {
-            99, 124, 119, 123, -14, 107, 111, -59, 48, 1, 103, 43, -2, -41, -85, 118,
-            -54, -126, -55, 125, -6, 89, 71, -16, -83, -44, -94, -81, -100, -92, 114, -64,
-            -73, -3, -109, 38, 54, 63, -9, -52, 52, -91, -27, -15, 113, -40, 49, 21,
-            4, -57, 35, -61, 24, -106, 5, -102, 7, 18, -128, -30, -21, 39, -78, 117,
-            9, -125, 44, 26, 27, 110, 90, -96, 82, 59, -42, -77, 41, -29, 47, -124,
-            83, -47, 0, -19, 32, -4, -79, 91, 106, -53, -66, 57, 74, 76, 88, -49,
-            -48, -17, -86, -5, 67, 77, 51, -123, 69, -7, 2, 127, 80, 60, -97, -88,
-            81, -93, 64, -113, -110, -99, 56, -11, -68, -74, -38, 33, 16, -1, -13, -46,
-            -51, 12, 19, -20, 95, -105, 68, 23, -60, -89, 126, 61, 100, 93, 25, 115,
-            96, -127, 79, -36, 34, 42, -112, -120, 70, -18, -72, 20, -34, 94, 11, -37,
-            -32, 50, 58, 10, 73, 6, 36, 92, -62, -45, -84, 98, -111, -107, -28, 121,
-            -25, -56, 55, 109, -115, -43, 78, -87, 108, 86, -12, -22, 101, 122, -82, 8,
-            -70, 120, 37, 46, 28, -90, -76, -58, -24, -35, 116, 31, 75, -67, -117, -118,
-            112, 62, -75, 102, 72, 3, -10, 14, 97, 53, 87, -71, -122, -63, 29, -98,
-            -31, -8, -104, 17, 105, -39, -114, -108, -101, 30, -121, -23, -50, 85, 40, -33,
-            -116, -95, -119, 13, -65, -26, 66, 104, 65, -103, 45, 15, -80, 84, -69, 22 };
-
-    /** AES decryption S-box.
-     *  <p>See FIPS-197 section 5.1.1 or Stallings section 5.2.
-     *  Note that hex values have been converted to decimal for easy table
-     *  specification in Java.
-     */
-    static final byte[] Si = {
-            82, 9, 106, -43, 48, 54, -91, 56, -65, 64, -93, -98, -127, -13, -41, -5,
-            124, -29, 57, -126, -101, 47, -1, -121, 52, -114, 67, 68, -60, -34, -23, -53,
-            84, 123, -108, 50, -90, -62, 35, 61, -18, 76, -107, 11, 66, -6, -61, 78,
-            8, 46, -95, 102, 40, -39, 36, -78, 118, 91, -94, 73, 109, -117, -47, 37,
-            114, -8, -10, 100, -122, 104, -104, 22, -44, -92, 92, -52, 93, 101, -74, -110,
-            108, 112, 72, 80, -3, -19, -71, -38, 94, 21, 70, 87, -89, -115, -99, -124,
-            -112, -40, -85, 0, -116, -68, -45, 10, -9, -28, 88, 5, -72, -77, 69, 6,
-            -48, 44, 30, -113, -54, 63, 15, 2, -63, -81, -67, 3, 1, 19, -118, 107,
-            58, -111, 17, 65, 79, 103, -36, -22, -105, -14, -49, -50, -16, -76, -26, 115,
-            -106, -84, 116, 34, -25, -83, 53, -123, -30, -7, 55, -24, 28, 117, -33, 110,
-            71, -15, 26, 113, 29, 41, -59, -119, 111, -73, 98, 14, -86, 24, -66, 27,
-            -4, 86, 62, 75, -58, -46, 121, 32, -102, -37, -64, -2, 120, -51, 90, -12,
-            31, -35, -88, 51, -120, 7, -57, 49, -79, 18, 16, 89, 39, -128, -20, 95,
-            96, 81, 127, -87, 25, -75, 74, 13, 45, -27, 122, -97, -109, -55, -100, -17,
-            -96, -32, 59, 77, -82, 42, -11, -80, -56, -21, -69, 60, -125, 83, -103, 97,
-            23, 43, 4, 126, -70, 119, -42, 38, -31, 105, 20, 99, 85, 33, 12, 125 };
-
-    /** AES key schedule round constant table.
-     *  <p>See FIPS-197 section 5.1.1 or Stallings section 5.2.
-     *  Note that hex values have been converted to decimal for easy table
-     *  specification in Java, and that indexes start at 1, hence initial 0 entry.
-     */
-    static final byte[] rcon = {
-            0,
-            1, 2, 4, 8, 16, 32,
-            64, -128, 27, 54, 108, -40,
-            -85, 77, -102, 47, 94, -68,
-            99, -58, -105, 53, 106, -44,
-            -77, 125, -6, -17, -59, -111 };
-
-    /** Internal AES constants and variables. */
-    public static final int
-            COL_SIZE = 4,                // depth of each column in AES state variable
-            NUM_COLS = BLOCK_SIZE / COL_SIZE,    // number of columns in AES state variable
-            ROOT = 0x11B;                // generator polynomial used in GF(2^8)
-
-    /** define ShiftRows transformation as shift amount for each row in state. */
-    static final int[] row_shift = {0, 1, 2, 3};
-
-    /* alog table for field GF(2^m) used to speed up multiplications. */
-    static final int[] alog = new int[256];
-    /* log table for field GF(2^m) used to speed up multiplications. */
-    static final int[] log =  new int[256];
-
-    /** static code to initialise the log and alog tables.
-     *  Used to implement multiplication in GF(2^8).
-     */
-    static {
-        int i, j;
-        // produce log and alog tables, needed for multiplying in the field GF(2^8)
-        alog[0] = 1;
-        for (i = 1; i < 256; i++) {
-            j = (alog[i-1] << 1) ^ alog[i-1];
-            if ((j & 0x100) != 0) j ^= ROOT;
-            alog[i] = j;
-        }
-        for (i = 1; i < 255; i++) log[alog[i]] = i;
-    }
-
-    /** Construct AES object. */
-    public aes() {
-    }
-
-    /** return number of rounds for a given AES key size.
-     *
-     * @param keySize    size of the user key material in bytes.
-     * @return        number of rounds for a given AES key size.
-     */
-    public static int getRounds (int keySize) {
-        switch (keySize) {
-            case 16:    // 16 byte = 128 bit key
-                return 10;
-            case 24:    // 24 byte = 192 bit key
-                return 12;
-            default:    // 32 byte = 256 bit key
-                return 14;
-        }
-    }
-
-    /** multiply two elements of GF(2^8).
-     *  <p>Using pre-computed log and alog tables for speed.
-     *
-     *  @param a 1st value to multiply
-     *  @param b 2nd value to multiply
-     *  @return product of a * b module its generator polynomial
-     */
-    static final int mul (int a, int b) {
-        return (a != 0 && b != 0) ?
-                alog[(log[a & 0xFF] + log[b & 0xFF]) % 255] :
-                0;
-    }
-
-    /** diagnostic trace of static tables. */
-    public static void trace_static() {
-        int i,j;
-        System.out.print("AES Static Tablesn");
-        System.out.print("S[] = n"); for(i=0;i<16;i++) { for(j=0;j<16;j++) System.out.print(Util.toHEX1(S[i*16+j])+", "); System.out.println();}
-        System.out.print("Si[] = n"); for(i=0;i<16;i++) { for(j=0;j<16;j++) System.out.print(Util.toHEX1(Si[i*16+j])+", "); System.out.println();}
-        System.out.print("rcon[] = n"); for(i=0;i<5;i++) {for(j=0;j<6;j++) System.out.print(Util.toHEX1(rcon[i*6+j])+", "); System.out.println();}
-        System.out.print("log[] = n"); for(i=0;i<32;i++) {for(j=0;j<8;j++) System.out.print(Util.toHEX1(log[i*8+j])+", "); System.out.println();}
-        System.out.print("alog[] = n"); for(i=0;i<32;i++) {for(j=0;j<8;j++) System.out.print(Util.toHEX1(alog[i*8+j])+", "); System.out.println();}
-    }
-
-    //......................................................................
-    /**
-     * AES encrypt 128-bit plaintext using key previously set.
-     *
-     * <p>Follows cipher specification given in FIPS-197 section 5.1
-     * See pseudo code in Fig 5, and details in this section.
-     *
-     * @param plain the 128-bit plaintext value to encrypt.
-     * @return the encrypted 128-bit ciphertext value.
-     */
-    public byte[] encrypt(byte[] plain) {
-        // define working variables
-        byte [] a = new byte[BLOCK_SIZE];    // AES state variable
-        byte [] ta = new byte[BLOCK_SIZE];    // AES temp state variable
-        byte [] Ker;                // encrypt keys for current round
-        int    i, k, row, col;
-
-        traceInfo = "";                // reset trace info
-        if (traceLevel > 0) traceInfo = "encryptAES(" + Util.toHEX1(plain) + ")";
-
-        // check for bad arguments
-        if (plain == null)
-            throw new IllegalArgumentException("Empty plaintext");
-        if (plain.length != BLOCK_SIZE)
-            throw new IllegalArgumentException("Incorrect plaintext length");
-
-        // copy plaintext bytes into state and do initial AddRoundKey(state)
-        Ker = Ke[0];
-        for (i = 0; i < BLOCK_SIZE; i++)    a[i] = (byte)(plain[i] ^ Ker[i]);
-        if (traceLevel > 2)
-            traceInfo += "n  R0 (Key = "+Util.toHEX1(Ker)+")ntAK = "+Util.toHEX1(a);
-        else if (traceLevel > 1)
-            traceInfo += "n  R0 (Key = "+Util.toHEX1(Ker)+")t = "+Util.toHEX1(a);
-
-        // for each round except last, apply round transforms
-        for (int r = 1; r < numRounds; r++) {
-            Ker = Ke[r];            // get session keys for this round
-            if (traceLevel > 1)    traceInfo += "n  R"+r+" (Key = "+Util.toHEX1(Ker)+")t";
-
-            // SubBytes(state) into ta using S-Box S
-            for (i = 0; i < BLOCK_SIZE; i++) ta[i] = S[a[i] & 0xFF];
-            if (traceLevel > 2)    traceInfo += "ntSB = "+Util.toHEX1(ta);
-
-            // ShiftRows(state) into a
-            for (i = 0; i < BLOCK_SIZE; i++) {
-                row = i % COL_SIZE;
-                k = (i + (row_shift[row] * COL_SIZE)) % BLOCK_SIZE;    // get shifted byte index
-                a[i] = ta[k];
-            }
-            if (traceLevel > 2)    traceInfo += "ntSR = "+Util.toHEX1(a);
-
-            // MixColumns(state) into ta
-            //   implemented by expanding matrix mult for each column
-            //   see FIPS-197 section 5.1.3
-            for (col = 0; col < NUM_COLS; col++) {
-                i = col * COL_SIZE;        // start index for this col
-                ta[i]   = (byte)(mul(2,a[i]) ^ mul(3,a[i+1]) ^ a[i+2] ^ a[i+3]);
-                ta[i+1] = (byte)(a[i] ^ mul(2,a[i+1]) ^ mul(3,a[i+2]) ^ a[i+3]);
-                ta[i+2] = (byte)(a[i] ^ a[i+1] ^ mul(2,a[i+2]) ^ mul(3,a[i+3]));
-                ta[i+3] = (byte)(mul(3,a[i]) ^ a[i+1] ^ a[i+2] ^ mul(2,a[i+3]));
-            }
-            if (traceLevel > 2)    traceInfo += "ntMC = "+Util.toHEX1(ta);
-
-            // AddRoundKey(state) into a
-            for (i = 0; i < BLOCK_SIZE; i++)    a[i] = (byte)(ta[i] ^ Ker[i]);
-            if (traceLevel > 2)    traceInfo += "ntAK";
-            if (traceLevel > 1)    traceInfo += " = "+Util.toHEX1(a);
-        }
-
-        // last round is special - only has SubBytes, ShiftRows and AddRoundKey
-        Ker = Ke[numRounds];            // get session keys for final round
-        if (traceLevel > 1)    traceInfo += "n  R"+numRounds+" (Key = "+Util.toHEX1(Ker)+")t";
-
-        // SubBytes(state) into a using S-Box S
-        for (i = 0; i < BLOCK_SIZE; i++) a[i] = S[a[i] & 0xFF];
-        if (traceLevel > 2)    traceInfo += "ntSB = "+Util.toHEX1(a);
-
-        // ShiftRows(state) into ta
-        for (i = 0; i < BLOCK_SIZE; i++) {
-            row = i % COL_SIZE;
-            k = (i + (row_shift[row] * COL_SIZE)) % BLOCK_SIZE;    // get shifted byte index
-            ta[i] = a[k];
-        }
-        if (traceLevel > 2)    traceInfo += "ntSR = "+Util.toHEX1(a);
-
-        // AddRoundKey(state) into a
-        for (i = 0; i < BLOCK_SIZE; i++)    a[i] = (byte)(ta[i] ^ Ker[i]);
-        if (traceLevel > 2)    traceInfo += "ntAK";
-        if (traceLevel > 1)    traceInfo += " = "+Util.toHEX1(a)+"n";
-        if (traceLevel > 0)    traceInfo += " = "+Util.toHEX1(a)+"n";
-        return (a);
-    }
-
-
-    //......................................................................
-    /**
-     * AES decrypt 128-bit ciphertext using key previously set.
-     *
-     * <p>Follows cipher specification given in FIPS-197 section 5.3
-     * See pseudo code in Fig 5, and details in this section.
-     *
-     * @param cipher the 128-bit ciphertext value to decrypt.
-     * @return the decrypted 128-bit plaintext value.
-     */
-    public byte[] decrypt(byte[] cipher) {
-        // define working variables
-        byte [] a = new byte[BLOCK_SIZE];    // AES state variable
-        byte [] ta = new byte[BLOCK_SIZE];    // AES temp state variable
-        byte [] Kdr;                // encrypt keys for current round
-        int    i, k, row, col;
-
-        traceInfo = "";                // reset trace info
-        if (traceLevel > 0) traceInfo = "decryptAES(" + Util.toHEX1(cipher) + ")";
-
-        // check for bad arguments
-        if (cipher == null)
-            throw new IllegalArgumentException("Empty ciphertext");
-        if (cipher.length != BLOCK_SIZE)
-            throw new IllegalArgumentException("Incorrect ciphertext length");
-
-        // copy ciphertext bytes into state and do initial AddRoundKey(state)
-        Kdr = Kd[0];
-        for (i = 0; i < BLOCK_SIZE; i++)    a[i] = (byte)(cipher[i] ^ Kdr[i]);
-        if (traceLevel > 2)
-            traceInfo += "n  R0 (Key = "+Util.toHEX1(Kdr)+")nt AK = "+Util.toHEX1(a);
-        else if (traceLevel > 1)
-            traceInfo += "n  R0 (Key = "+Util.toHEX1(Kdr)+")t = "+Util.toHEX1(a);
-
-        // for each round except last, apply round transforms
-        for (int r = 1; r < numRounds; r++) {
-            Kdr = Kd[r];            // get session keys for this round
-            if (traceLevel > 1)    traceInfo += "n  R"+r+" (Key = "+Util.toHEX1(Kdr)+")t";
-
-            // InvShiftRows(state) into ta (nb. same shift as encrypt but subtract)
-            for (i = 0; i < BLOCK_SIZE; i++) {
-                row = i % COL_SIZE;
-                // get shifted byte index
-                k = (i + BLOCK_SIZE - (row_shift[row] * COL_SIZE)) % BLOCK_SIZE;
-                ta[i] = a[k];
-            }
-            if (traceLevel > 2)    traceInfo += "ntISR = "+Util.toHEX1(ta);
-
-            // InvSubBytes(state) into a using inverse S-box Si
-            for (i = 0; i < BLOCK_SIZE; i++) a[i] = Si[ta[i] & 0xFF];
-            if (traceLevel > 2)    traceInfo += "ntISB = "+Util.toHEX1(a);
-
-            // AddRoundKey(state) into ta
-            for (i = 0; i < BLOCK_SIZE; i++)    ta[i] = (byte)(a[i] ^ Kdr[i]);
-            if (traceLevel > 2)    traceInfo += "nt AK = "+Util.toHEX1(ta);
-
-            // InvMixColumns(state) into a
-            //   implemented by expanding matrix mult for each column
-            //   see FIPS-197 section 5.3.3
-            for (col = 0; col < NUM_COLS; col++) {
-                i = col * COL_SIZE;        // start index for this col
-                a[i]   = (byte)(mul(0x0e,ta[i]) ^ mul(0x0b,ta[i+1]) ^ mul(0x0d,ta[i+2]) ^ mul(0x09,ta[i+3]));
-                a[i+1] = (byte)(mul(0x09,ta[i]) ^ mul(0x0e,ta[i+1]) ^ mul(0x0b,ta[i+2]) ^ mul(0x0d,ta[i+3]));
-                a[i+2] = (byte)(mul(0x0d,ta[i]) ^ mul(0x09,ta[i+1]) ^ mul(0x0e,ta[i+2]) ^ mul(0x0b,ta[i+3]));
-                a[i+3] = (byte)(mul(0x0b,ta[i]) ^ mul(0x0d,ta[i+1]) ^ mul(0x09,ta[i+2]) ^ mul(0x0e,ta[i+3]));
-            }
-            if (traceLevel > 2)    traceInfo += "ntIMC";
-            if (traceLevel > 1)    traceInfo += " = "+Util.toHEX1(a);
-        }
-
-        // last round is special - only has InvShiftRows, InvSubBytes and AddRoundKey
-        Kdr = Kd[numRounds];            // get session keys for final round
-        if (traceLevel > 1)    traceInfo += "n  R"+numRounds+" (Key = "+Util.toHEX1(Kdr)+")t";
-
-        // InvShiftRows(state) into ta
-        for (i = 0; i < BLOCK_SIZE; i++) {
-            row = i % COL_SIZE;
-            // get shifted byte index
-            k = (i + BLOCK_SIZE - (row_shift[row] * COL_SIZE)) % BLOCK_SIZE;
-            ta[i] = a[k];
-        }
-        if (traceLevel > 2)    traceInfo += "ntISR = "+Util.toHEX1(a);
-
-        // InvSubBytes(state) into ta using inverse S-box Si
-        for (i = 0; i < BLOCK_SIZE; i++) ta[i] = Si[ta[i] & 0xFF];
-        if (traceLevel > 2)    traceInfo += "ntISB = "+Util.toHEX1(a);
-
-        // AddRoundKey(state) into a
-        for (i = 0; i < BLOCK_SIZE; i++)    a[i] = (byte)(ta[i] ^ Kdr[i]);
-        if (traceLevel > 2)    traceInfo += "nt AK";
-        if (traceLevel > 1)    traceInfo += " = "+Util.toHEX1(a)+"n";
-        if (traceLevel > 0)    traceInfo += " = "+Util.toHEX1(a)+"n";
-        return (a);
-    }
-
-
-    //......................................................................
-    /**
-     * Expand a user-supplied key material into a session key.
-     * <p>See FIPS-197 Section 5.3 Fig 11 for details of the key expansion.
-     * <p>Session keys will be saved in Ke and Kd instance variables,
-     * along with numRounds being the number of rounds for this sized key.
-     *
-     * @param key        The 128/192/256-bit AES key to use.
-     */
-    public void setKey(byte[] key) {
-        // assorted internal constants
-        final int BC = BLOCK_SIZE / 4;
-        final int Klen = key.length;
-        final int Nk = Klen / 4;
-
-        int i, j, r;
-
-        traceInfo = "";            // reset trace info
-        if (traceLevel > 0) traceInfo = "setKey(" + Util.toHEX1(key) + ")n";
-
-        // check for bad arguments
-        if (key == null)
-            throw new IllegalArgumentException("Empty key");
-        if (!(key.length == 16 || key.length == 24 || key.length == 32))
-            throw new IllegalArgumentException("Incorrect key length");
-
-        // set master number of rounds given size of this key
-        numRounds = getRounds(Klen);
-        Log.d("TAG", "setKey: "+numRounds);
-        final int ROUND_KEY_COUNT = (numRounds + 1) * BC;
-
-        // allocate 4 arrays of bytes to hold the session key values
-        // each array holds 1 of the 4 bytes [b0 b1 b2 b3] in each word w
-        byte[] w0 = new byte[ROUND_KEY_COUNT];
-        byte[] w1 = new byte[ROUND_KEY_COUNT];
-        byte[] w2 = new byte[ROUND_KEY_COUNT];
-        byte[] w3 = new byte[ROUND_KEY_COUNT];
-
-        // allocate arrays to hold en/decrypt session keys (by byte rather than word)
-        Ke = new byte[numRounds + 1][BLOCK_SIZE]; // encryption round keys
-        Kd = new byte[numRounds + 1][BLOCK_SIZE]; // decryption round keys
-
-        // copy key into start of session array (by word, each byte in own array)
-        for (i=0, j=0; i < Nk; i++) {
-            w0[i] = key[j++]; w1[i] = key[j++]; w2[i] = key[j++]; w3[i] = key[j++];
-        }
-
-        // implement key expansion algorithm
-        byte t0, t1, t2, t3, old0;        // temp byte values for each word
-        for (i = Nk; i < ROUND_KEY_COUNT; i++) {
-            t0 = w0[i-1]; t1 = w1[i-1]; t2 = w2[i-1]; t3 = w3[i-1];    // temp = w[i-1]
-            if (i % Nk == 0) {
-                // temp = SubWord(RotWord(temp)) ^ Rcon[i/Nk]
-                old0 = t0;            // save old 1st byte value for t3 calc
-                t0 = (byte)(S[t1 & 0xFF] ^ rcon[i/Nk]);    // nb. constant XOR 1st byte only
-                t1 = (byte)(S[t2 & 0xFF]);
-                t2 = (byte)(S[t3 & 0xFF]);    // nb. RotWord done by reordering bytes used
-                t3 = (byte)(S[old0 & 0xFF]);
-            }
-            else if ((Nk > 6) && (i % Nk == 4)) {
-                // temp = SubWord(temp)
-                t0 = S[t0 & 0xFF]; t1 = S[t1 & 0xFF]; t2 = S[t2 & 0xFF]; t3 = S[t3 & 0xFF];
-            }
-            // w[i] = w[i-Nk] ^ temp
-            w0[i] = (byte)(w0[i-Nk] ^ t0);
-            w1[i] = (byte)(w1[i-Nk] ^ t1);
-            w2[i] = (byte)(w2[i-Nk] ^ t2);
-            w3[i] = (byte)(w3[i-Nk] ^ t3);
-        }
-
-        // now copy values into en/decrypt session arrays by round & byte in round
-        for (r = 0, i = 0; r < numRounds + 1; r++) {    // for each round
-            for (j = 0; j < BC; j++) {        // for each word in round
-                Ke[r][4*j] = w0[i];
-                Ke[r][4*j+1] = w1[i];
-                Ke[r][4*j+2] = w2[i];
-                Ke[r][4*j+3] = w3[i];
-                Kd[numRounds - r][4*j] = w0[i];
-                Kd[numRounds - r][4*j+1] = w1[i];
-                Kd[numRounds - r][4*j+2] = w2[i];
-                Kd[numRounds - r][4*j+3] = w3[i];
-                i++;
-            }
-        }
-
-        // create trace info if needed
-        if (traceLevel > 3) {
-            traceInfo += "  Encrypt Round keys:n";
-            for(r=0;r<numRounds+1;r++) traceInfo += "  R"+r+"t = "+Util.toHEX1(Ke[r])+"n";
-            traceInfo += "  Decrypt Round keys:n";
-            for(r=0;r<numRounds+1;r++) traceInfo += "  R"+r+"t = "+Util.toHEX1(Kd[r])+"n";
-        }
-    }
-
-
-    /** self-test routine for AES cipher
-     *  @param hkey    key to test in hex
-     *  @param hplain    plaintext to test in hex
-     *  @param hcipher    ciphertext to test in hex
-     *  @param lev    trace level to use
-     */
-    public static void self_test (String hkey, String hplain, String hcipher, int lev) {
-
-        // AES test triple (128-bit key test value from FIPS-197)
-        byte [] key    = Util.hex2byte(hkey);
-        byte [] plain    = Util.hex2byte(hplain);
-        byte [] cipher    = Util.hex2byte(hcipher);
-        byte [] result;
-
-        aes testAES = new aes();    // create new AES instance to test triple
-        testAES.traceLevel = lev;    // select level of trace info
-        testAES.setKey(key);        // set key and display trace info
-        System.out.print(testAES.traceInfo);
-
-        result = testAES.encrypt(plain);    // test encryption
-        System.out.print(testAES.traceInfo);
-        if (Arrays.equals(result, cipher))
-            System.out.print("Test OKn");
-        else
-            System.out.print("Test Failed. Result was "+Util.toHEX(result)+"n");
-
-        result = testAES.decrypt(cipher);    // test decryption
-        System.out.print(testAES.traceInfo);
-        if (Arrays.equals(result, plain))
-            System.out.print("Test OKn");
-        else
-            System.out.print("Test Failed. Result was "+Util.toHEX(result)+"n");
-        System.out.println();
-    }
-
-
-
-
-    public static String static_byteArrayToString(byte[] data) {
-        String res = "";
-        StringBuffer sb = new StringBuffer();
-        for(int i=0; i<data.length; i++) {
-            int n = (int) data[i];
-            if(n<0) n += 256;
-            sb.append((char) n);
-        }
-        res = sb.toString();
-        return res;
-    }
-
-    public static byte[] static_stringToByteArray(String s){
-        byte[] temp = new byte[s.length()];
-
-        for(int i=0;i<s.length();i++){
-            temp[i] = (byte) s.charAt(i);
-//                Log.d("TAG", "static_stringToByteArray:" +temp[i]);
-
-        }
-        return temp;
-
-
-    }
-
-    public static String static_intArrayToString(int[]t){
-        StringBuffer sb = new StringBuffer();
-        for(int i=0;i<t.length;i++){
-            sb.append((char)t[i]);
-        }
-        return sb.toString();
-    }
-
-    /** self-test routine for AES cipher
-     // @param args command line arguments
-     */
-
-    public String _cryptAll(String data, int mode)  {
-        aes aes = this;
-        if(data.length()/16 > ((int) data.length()/16)) {
-            int rest = data.length()-((int) data.length()/16)*16;
-            for(int i=0; i<rest; i++)
-                data += " ";
-        }
-        int nParts = (int) data.length()/16;
-        byte[] res = new byte[data.length()];
-        String partStr = "";
-        byte[] partByte = new byte[16];
-        for(int p=0; p<nParts; p++) {
-            partStr = data.substring(p*16, p*16+16);
-            partByte = static_stringToByteArray(partStr);
-            if(mode==1) partByte = aes.encrypt(partByte);
-            if(mode==2) partByte = aes.decrypt(partByte);
-            for(int b=0; b<16; b++)
-                res[p*16+b] = partByte[b];
-        }
-        return static_byteArrayToString(res);
-    }
-
-    public String Encrypt(String data) {
-        while((data.length() % 32) != 0) data += " ";
-        return _cryptAll(data, 1);
-    }
-    public String Decrypt(String data) {
-        return _cryptAll(data, 2).trim();
-    }
-
-    public void setKey(String key) {
-        //System.out.println("CRYPT KEY IS "+key);
-        setKey(static_stringToByteArray(key));
-    }
-
-
-    /**
-     *   collection of utility routines for converting and displaying binary
-     *   saved in byte/short/int arrays, and loaded/displayed using hex.
-     *
-     *   @author Lawrie Brown, Oct 2001
-     */
-    public static class Util {
-
-        //......................................................................
-        // utility conversions between byte, short and int arrays
-
-        public static byte[] short2byte (short[] sa) {
-            int length = sa.length;
-            byte[] ba = new byte[length * 2];
-            for (int i = 0, j = 0, k; i < length; ) {
-                k = sa[i++];
-                ba[j++] = (byte)((k >>> 8) & 0xFF);
-                ba[j++] = (byte)( k        & 0xFF);
-            }
-            return (ba);
-        }
-
-        //......................................................................
-        public static short[] byte2short (byte[] ba) {
-            int length = ba.length;
-            short[] sa = new short[length / 2];
-            for (int i = 0, j = 0; j < length / 2; ) {
-                sa[j++] = (short)(((ba[i++] & 0xFF) <<  8) |
-                        ((ba[i++] & 0xFF)      ));
-            }
-            return (sa);
-        }
-
-        //......................................................................
-        public static byte[] int2byte (int[] ia) {
-            int length = ia.length;
-            byte[] ba = new byte[length * 4];
-            for (int i = 0, j = 0, k; i < length; ) {
-                k = ia[i++];
-                ba[j++] = (byte)((k >>>24) & 0xFF);
-                ba[j++] = (byte)((k >>>16) & 0xFF);
-                ba[j++] = (byte)((k >>> 8) & 0xFF);
-                ba[j++] = (byte)( k        & 0xFF);
-            }
-            return (ba);
-        }
-
-        //......................................................................
-        public static int[] byte2int (byte[] ba) {
-            int length = ba.length;
-            int[] ia = new int[length / 4];
-            for (int i = 0, j = 0; j < length / 4; ) {
-                ia[j++] = (((ba[i++] & 0xFF) << 24) |
-                        ((ba[i++] & 0xFF) << 16) |
-                        ((ba[i++] & 0xFF) <<  8) |
-                        ((ba[i++] & 0xFF)      ));
-            }
-            return (ia);
-        }
-
-        //......................................................................
-        // utility methods (adapted from cryptix.util.core.Hex class)
-
-        /** array mapping hex value (0-15) to corresponding hex digit (0-9a-f). */
-        public static final char[] HEX_DIGITS = {
-                '0','1','2','3','4','5','6','7','8','9','a','b','c','d','e','f'
-        };
-
-        /**
-         * utility method to convert a byte array to a hexadecimal string.
-         * <p>
-         * Each byte of the input array is converted to 2 hex symbols,
-         * using the HEX_DIGITS array for the mapping, with spaces after each pair.
-         * @param ba array of bytes to be converted into hex
-         * @return hex representation of byte array
-         */
-        public static String toHEX (byte[] ba) {
-            int length = ba.length;
-            char[] buf = new char[length * 3];
-            for (int i = 0, j = 0, k; i < length; ) {
-                k = ba[i++];
-                buf[j++] = HEX_DIGITS[(k >>> 4) & 0x0F];
-                buf[j++] = HEX_DIGITS[ k        & 0x0F];
-                buf[j++] = ' ';
-            }
-            return new String(buf);
-        }
-
-        /**
-         * utility method to convert a short array to a hexadecimal string.
-         * <p>
-         * Each word of the input array is converted to 4 hex symbols,
-         * using the HEX_DIGITS array for the mapping, with spaces after every 4.
-         * @param ia array of shorts to be converted into hex
-         * @return hex representation of short array
-         */
-        public static String toHEX (short[] ia) {
-            int length = ia.length;
-            char[] buf = new char[length * 5];
-            for (int i = 0, j = 0, k; i < length; ) {
-                k = ia[i++];
-                buf[j++] = HEX_DIGITS[(k >>>12) & 0x0F];
-                buf[j++] = HEX_DIGITS[(k >>> 8) & 0x0F];
-                buf[j++] = HEX_DIGITS[(k >>> 4) & 0x0F];
-                buf[j++] = HEX_DIGITS[ k        & 0x0F];
-                buf[j++] = ' ';
-            }
-            return new String(buf);
-        }
-
-        /**
-         * utility method to convert an int array to a hexadecimal string.
-         * <p>
-         * Each word of the input array is converted to 8 hex symbols,
-         * using the HEX_DIGITS array for the mapping, with spaces after every 4.
-         * @param ia array of ints to be converted into hex
-         * @return hex representation of int array
-         */
-        public static String toHEX (int[] ia) {
-            int length = ia.length;
-            char[] buf = new char[length * 10];
-            for (int i = 0, j = 0, k; i < length; ) {
-                k = ia[i++];
-                buf[j++] = HEX_DIGITS[(k >>>28) & 0x0F];
-                buf[j++] = HEX_DIGITS[(k >>>24) & 0x0F];
-                buf[j++] = HEX_DIGITS[(k >>>20) & 0x0F];
-                buf[j++] = HEX_DIGITS[(k >>>16) & 0x0F];
-                buf[j++] = ' ';
-                buf[j++] = HEX_DIGITS[(k >>>12) & 0x0F];
-                buf[j++] = HEX_DIGITS[(k >>> 8) & 0x0F];
-                buf[j++] = HEX_DIGITS[(k >>> 4) & 0x0F];
-                buf[j++] = HEX_DIGITS[ k        & 0x0F];
-                buf[j++] = ' ';
-            }
-            return new String(buf);
-        }
-
-        /**
-         * utility method to convert a byte to a hexadecimal string.
-         * <p>
-         * the byte is converted to 2 hex symbols,
-         * using the HEX_DIGITS array for the mapping.
-         * @param b byte to be converted into hex
-         * @return hex representation of byte
-         */
-        public static String toHEX1 (byte b) {
-            char[] buf = new char[2];
-            int j = 0;
-            buf[j++] = HEX_DIGITS[(b >>> 4) & 0x0F];
-            buf[j++] = HEX_DIGITS[ b        & 0x0F];
-            return new String(buf);
-        }
-
-        /**
-         * utility method to convert a byte array to a hexadecimal string.
-         * <p>
-         * Each byte of the input array is converted to 2 hex symbols,
-         * using the HEX_DIGITS array for the mapping.
-         * @param ba array of bytes to be converted into hex
-         * @return hex representation of byte array
-         */
-        public static String toHEX1 (byte[] ba) {
-            int length = ba.length;
-            char[] buf = new char[length * 2];
-            for (int i = 0, j = 0, k; i < length; ) {
-                k = ba[i++];
-                buf[j++] = HEX_DIGITS[(k >>> 4) & 0x0F];
-                buf[j++] = HEX_DIGITS[ k        & 0x0F];
-            }
-            return new String(buf);
-        }
-
-        /**
-         * utility method to convert a short array to a hexadecimal string.
-         * <p>
-         * Each word of the input array is converted to 4 hex symbols,
-         * using the HEX_DIGITS array for the mapping.
-         * @param ia array of shorts to be converted into hex
-         * @return hex representation of short array
-         */
-        public static String toHEX1 (short[] ia) {
-            int length = ia.length;
-            char[] buf = new char[length * 4];
-            for (int i = 0, j = 0, k; i < length; ) {
-                k = ia[i++];
-                buf[j++] = HEX_DIGITS[(k >>>12) & 0x0F];
-                buf[j++] = HEX_DIGITS[(k >>> 8) & 0x0F];
-                buf[j++] = HEX_DIGITS[(k >>> 4) & 0x0F];
-                buf[j++] = HEX_DIGITS[ k        & 0x0F];
-            }
-            return new String(buf);
-        }
-
-        /**
-         * utility method to convert an int to a hexadecimal string.
-         * <p>
-         * the int is converted to 8 hex symbols,
-         * using the HEX_DIGITS array for the mapping.
-         * @param i int to be converted into hex
-         * @return hex representation of int
-         */
-        public static String toHEX1 (int i) {
-            char[] buf = new char[8];
-            int j = 0;
-            buf[j++] = HEX_DIGITS[(i >>>28) & 0x0F];
-            buf[j++] = HEX_DIGITS[(i >>>24) & 0x0F];
-            buf[j++] = HEX_DIGITS[(i >>>20) & 0x0F];
-            buf[j++] = HEX_DIGITS[(i >>>16) & 0x0F];
-            buf[j++] = HEX_DIGITS[(i >>>12) & 0x0F];
-            buf[j++] = HEX_DIGITS[(i >>> 8) & 0x0F];
-            buf[j++] = HEX_DIGITS[(i >>> 4) & 0x0F];
-            buf[j++] = HEX_DIGITS[ i        & 0x0F];
-            return new String(buf);
-        }
-
-        /**
-         * utility method to convert an int array to a hexadecimal string.
-         * <p>
-         * Each word of the input array is converted to 8 hex symbols,
-         * using the HEX_DIGITS array for the mapping.
-         * @param ia array of ints to be converted into hex
-         * @return hex representation of int array
-         */
-        public static String toHEX1 (int[] ia) {
-            int length = ia.length;
-            char[] buf = new char[length * 8];
-            for (int i = 0, j = 0, k; i < length; ) {
-                k = ia[i++];
-                buf[j++] = HEX_DIGITS[(k >>>28) & 0x0F];
-                buf[j++] = HEX_DIGITS[(k >>>24) & 0x0F];
-                buf[j++] = HEX_DIGITS[(k >>>20) & 0x0F];
-                buf[j++] = HEX_DIGITS[(k >>>16) & 0x0F];
-                buf[j++] = HEX_DIGITS[(k >>>12) & 0x0F];
-                buf[j++] = HEX_DIGITS[(k >>> 8) & 0x0F];
-                buf[j++] = HEX_DIGITS[(k >>> 4) & 0x0F];
-                buf[j++] = HEX_DIGITS[ k        & 0x0F];
-            }
-            return new String(buf);
-        }
-
-
-        //......................................................................
-        /**
-         * Returns a byte array from a string of hexadecimal digits.
-         *
-         * @param hex string of hex characters
-         * @return byte array of binary data corresponding to hex string input
-         */
-        public static byte[] hex2byte(String hex) {
-            int len = hex.length();
-            byte[] buf = new byte[((len + 1) / 2)];
-
-            int i = 0, j = 0;
-            if ((len % 2) == 1)
-                buf[j++] = (byte) hexDigit(hex.charAt(i++));
-
-            while (i < len) {
-                buf[j++] = (byte) ((hexDigit(hex.charAt(i++)) << 4) |
-                        hexDigit(hex.charAt(i++)));
-            }
-            return buf;
-        }
-
-        //......................................................................
-        /**
-         * Returns true if the string consists ONLY of valid hex characters
-         *
-         * @param hex string of hex characters
-         * @return true if a valid hex string
-         */
-        public static boolean isHex(String hex) {
-            int len = hex.length();
-            int i = 0;
-            char ch;
-
-            while (i < len) {
-                ch = hex.charAt(i++);
-                if (! ((ch >= '0' && ch <= '9') || (ch >= 'A' && ch <= 'F') ||
-                        (ch >= 'a' && ch <= 'f'))) return false;
-            }
-            return true;
-        }
-
-        //......................................................................
-        /**
-         * Returns the number from 0 to 15 corresponding to the hex digit <i>ch</i>.
-         *
-         * @param ch hex digit character (must be 0-9A-Fa-f)
-         * @return   numeric equivalent of hex digit (0-15)
-         */
-        public static int hexDigit(char ch) {
-            if (ch >= '0' && ch <= '9')
-                return ch - '0';
-            if (ch >= 'A' && ch <= 'F')
-                return ch - 'A' + 10;
-            if (ch >= 'a' && ch <= 'f')
-                return ch - 'a' + 10;
-
-            return(0);	// any other char is treated as 0
-        }
-
-    }
-}
-
-
-
-
-//aes awal
-//    /** specify whether diagnostic trace output is required.
-//     *  <p>
-//     *  Available levels are:<br>
-//     *  0: no trace info is generated<br>
-//     *  1: trace major calls with params (setKey, encrypt, decrypt)<br>
-//     *  2: + trace round values whilst en/decrypting<br>
-//     *  3: + trace all steps within each round<br>
-//     *  4: + trace subkey generation<br>
-//     *  5: + trace static table values<br>
-//     */
-//    public int traceLevel = 0;
-//
-//    /** string which accumulates diagnostic output for display.
-//     *  <p>
-//     *  Contents are reset on each major call (setKey, encrypt, decrypt)
-//     *  and should be used after each of these calls returns for display.
-//     */
-//    public String traceInfo = "";
-//
-//    /** AES constants and variables. */
-//    public static final int
-//            ROUNDS = 14,        // AES has 10-14 rounds
-//            BLOCK_SIZE = 16,    // AES uses 128-bit (16 byte) key
-//            KEY_LENGTH = 32;    // AES uses 128/192/256-bit (16/24/32 byte) key
-//
-//    // Define key attributes for current AES instance
-//    /** number of rounds used given AES key set on this instance. */
-//    int numRounds;
-//    /** encryption round keys derived from AES key set on this instance. */
-//    byte[][] Ke;
-//    /** decryption round keys derived from AES key set on this instance. */
-//    byte[][] Kd;
-//
-//    /** AES encryption S-box.
-//     *  <p>See FIPS-197 section 5.1.1 or Stallings section 5.2.
-//     *  Note that hex values have been converted to decimal for easy table
-//     *  specification in Java.
-//     */
-//    static final byte[] S = {
+    public static final int sizeblock = 16;
+
+    int pakairounds;
+    //kunci enkripsi round
+    byte[][] enkripsikunci;
+    //kunci dekripsi round
+    byte[][] dekripkunci;
+
+//     AES S-box hex ke dec. dilakukan dengan mencari panjang array ke ...
+    public static final int panjang = 4, kolom = sizeblock / panjang, gen_poli = 0x11B;                // generator plinomial  GF(2^8)
+
+    static final int[] Sbox = {
+            //0     1    2      3     4    5     6     7      8    9     A      B    C     D     E     F
+            0x63, 0x7c, 0x77, 0x7b, 0xf2, 0x6b, 0x6f, 0xc5, 0x30, 0x01, 0x67, 0x2b, 0xfe, 0xd7, 0xab, 0x76,
+            0xca, 0x82, 0xc9, 0x7d, 0xfa, 0x59, 0x47, 0xf0, 0xad, 0xd4, 0xa2, 0xaf, 0x9c, 0xa4, 0x72, 0xc0,
+            0xb7, 0xfd, 0x93, 0x26, 0x36, 0x3f, 0xf7, 0xcc, 0x34, 0xa5, 0xe5, 0xf1, 0x71, 0xd8, 0x31, 0x15,
+            0x04, 0xc7, 0x23, 0xc3, 0x18, 0x96, 0x05, 0x9a, 0x07, 0x12, 0x80, 0xe2, 0xeb, 0x27, 0xb2, 0x75,
+            0x09, 0x83, 0x2c, 0x1a, 0x1b, 0x6e, 0x5a, 0xa0, 0x52, 0x3b, 0xd6, 0xb3, 0x29, 0xe3, 0x2f, 0x84,
+            0x53, 0xd1, 0x00, 0xed, 0x20, 0xfc, 0xb1, 0x5b, 0x6a, 0xcb, 0xbe, 0x39, 0x4a, 0x4c, 0x58, 0xcf,
+            0xd0, 0xef, 0xaa, 0xfb, 0x43, 0x4d, 0x33, 0x85, 0x45, 0xf9, 0x02, 0x7f, 0x50, 0x3c, 0x9f, 0xa8,
+            0x51, 0xa3, 0x40, 0x8f, 0x92, 0x9d, 0x38, 0xf5, 0xbc, 0xb6, 0xda, 0x21, 0x10, 0xff, 0xf3, 0xd2,
+            0xcd, 0x0c, 0x13, 0xec, 0x5f, 0x97, 0x44, 0x17, 0xc4, 0xa7, 0x7e, 0x3d, 0x64, 0x5d, 0x19, 0x73,
+            0x60, 0x81, 0x4f, 0xdc, 0x22, 0x2a, 0x90, 0x88, 0x46, 0xee, 0xb8, 0x14, 0xde, 0x5e, 0x0b, 0xdb,
+            0xe0, 0x32, 0x3a, 0x0a, 0x49, 0x06, 0x24, 0x5c, 0xc2, 0xd3, 0xac, 0x62, 0x91, 0x95, 0xe4, 0x79,
+            0xe7, 0xc8, 0x37, 0x6d, 0x8d, 0xd5, 0x4e, 0xa9, 0x6c, 0x56, 0xf4, 0xea, 0x65, 0x7a, 0xae, 0x08,
+            0xba, 0x78, 0x25, 0x2e, 0x1c, 0xa6, 0xb4, 0xc6, 0xe8, 0xdd, 0x74, 0x1f, 0x4b, 0xbd, 0x8b, 0x8a,
+            0x70, 0x3e, 0xb5, 0x66, 0x48, 0x03, 0xf6, 0x0e, 0x61, 0x35, 0x57, 0xb9, 0x86, 0xc1, 0x1d, 0x9e,
+            0xe1, 0xf8, 0x98, 0x11, 0x69, 0xd9, 0x8e, 0x94, 0x9b, 0x1e, 0x87, 0xe9, 0xce, 0x55, 0x28, 0xdf,
+            0x8c, 0xa1, 0x89, 0x0d, 0xbf, 0xe6, 0x42, 0x68, 0x41, 0x99, 0x2d, 0x0f, 0xb0, 0x54, 0xbb, 0x16 };
+
+//    static final byte[] Sbox = {
 //            99, 124, 119, 123, -14, 107, 111, -59, 48, 1, 103, 43, -2, -41, -85, 118,
 //            -54, -126, -55, 125, -6, 89, 71, -16, -83, -44, -94, -81, -100, -92, 114, -64,
 //            -73, -3, -109, 38, 54, 63, -9, -52, 52, -91, -27, -15, 113, -40, 49, 21,
@@ -933,13 +57,28 @@ public class aes {
 //            112, 62, -75, 102, 72, 3, -10, 14, 97, 53, 87, -71, -122, -63, 29, -98,
 //            -31, -8, -104, 17, 105, -39, -114, -108, -101, 30, -121, -23, -50, 85, 40, -33,
 //            -116, -95, -119, 13, -65, -26, 66, 104, 65, -103, 45, 15, -80, 84, -69, 22 };
-//
-//    /** AES decryption S-box.
-//     *  <p>See FIPS-197 section 5.1.1 or Stallings section 5.2.
-//     *  Note that hex values have been converted to decimal for easy table
-//     *  specification in Java.
-//     */
-//    static final byte[] Si = {
+
+    //    AES invers S-box. dilakukan dengan mencari panjang array ke ...
+
+    static final int[] inversSbox = {
+            0x52, 0x09, 0x6A, 0xD5, 0x30, 0x36, 0xA5, 0x38, 0xBF, 0x40, 0xA3, 0x9E, 0x81, 0xF3, 0xD7, 0xFB,
+            0x7C, 0xE3, 0x39, 0x82, 0x9B, 0x2F, 0xFF, 0x87, 0x34, 0x8E, 0x43, 0x44, 0xC4, 0xDE, 0xE9, 0xCB,
+            0x54, 0x7B, 0x94, 0x32, 0xA6, 0xC2, 0x23, 0x3D, 0xEE, 0x4C, 0x95, 0x0B, 0x42, 0xFA, 0xC3, 0x4E,
+            0x08, 0x2E, 0xA1, 0x66, 0x28, 0xD9, 0x24, 0xB2, 0x76, 0x5B, 0xA2, 0x49, 0x6D, 0x8B, 0xD1, 0x25,
+            0x72, 0xF8, 0xF6, 0x64, 0x86, 0x68, 0x98, 0x16, 0xD4, 0xA4, 0x5C, 0xCC, 0x5D, 0x65, 0xB6, 0x92,
+            0x6C, 0x70, 0x48, 0x50, 0xFD, 0xED, 0xB9, 0xDA, 0x5E, 0x15, 0x46, 0x57, 0xA7, 0x8D, 0x9D, 0x84,
+            0x90, 0xD8, 0xAB, 0x00, 0x8C, 0xBC, 0xD3, 0x0A, 0xF7, 0xE4, 0x58, 0x05, 0xB8, 0xB3, 0x45, 0x06,
+            0xD0, 0x2C, 0x1E, 0x8F, 0xCA, 0x3F, 0x0F, 0x02, 0xC1, 0xAF, 0xBD, 0x03, 0x01, 0x13, 0x8A, 0x6B,
+            0x3A, 0x91, 0x11, 0x41, 0x4F, 0x67, 0xDC, 0xEA, 0x97, 0xF2, 0xCF, 0xCE, 0xF0, 0xB4, 0xE6, 0x73,
+            0x96, 0xAC, 0x74, 0x22, 0xE7, 0xAD, 0x35, 0x85, 0xE2, 0xF9, 0x37, 0xE8, 0x1C, 0x75, 0xDF, 0x6E,
+            0x47, 0xF1, 0x1A, 0x71, 0x1D, 0x29, 0xC5, 0x89, 0x6F, 0xB7, 0x62, 0x0E, 0xAA, 0x18, 0xBE, 0x1B,
+            0xFC, 0x56, 0x3E, 0x4B, 0xC6, 0xD2, 0x79, 0x20, 0x9A, 0xDB, 0xC0, 0xFE, 0x78, 0xCD, 0x5A, 0xF4,
+            0x1F, 0xDD, 0xA8, 0x33, 0x88, 0x07, 0xC7, 0x31, 0xB1, 0x12, 0x10, 0x59, 0x27, 0x80, 0xEC, 0x5F,
+            0x60, 0x51, 0x7F, 0xA9, 0x19, 0xB5, 0x4A, 0x0D, 0x2D, 0xE5, 0x7A, 0x9F, 0x93, 0xC9, 0x9C, 0xEF,
+            0xA0, 0xE0, 0x3B, 0x4D, 0xAE, 0x2A, 0xF5, 0xB0, 0xC8, 0xEB, 0xBB, 0x3C, 0x83, 0x53, 0x99, 0x61,
+            0x17, 0x2B, 0x04, 0x7E, 0xBA, 0x77, 0xD6, 0x26, 0xE1, 0x69, 0x14, 0x63, 0x55, 0x21, 0x0C, 0x7D};
+
+//    static final byte[] inversSbox = {
 //            82, 9, 106, -43, 48, 54, -91, 56, -65, 64, -93, -98, -127, -13, -41, -5,
 //            124, -29, 57, -126, -101, 47, -1, -121, 52, -114, 67, 68, -60, -34, -23, -53,
 //            84, 123, -108, 50, -90, -62, 35, 61, -18, 76, -107, 11, 66, -6, -61, 78,
@@ -956,914 +95,530 @@ public class aes {
 //            96, 81, 127, -87, 25, -75, 74, 13, 45, -27, 122, -97, -109, -55, -100, -17,
 //            -96, -32, 59, 77, -82, 42, -11, -80, -56, -21, -69, 60, -125, 83, -103, 97,
 //            23, 43, 4, 126, -70, 119, -42, 38, -31, 105, 20, 99, 85, 33, 12, 125 };
+
+
+//    AES Rcon key expansion
+    static final int[] rcon = {
+        0x8d, 0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80, 0x1b, 0x36, 0x6c, 0xd8,
+        0xab, 0x4d, 0x9a, 0x2f, 0x5e, 0xbc, 0x63, 0xc6, 0x97, 0x35, 0x6a, 0xd4, 0xb3,
+        0x7d, 0xfa, 0xef, 0xc5, 0x91 };
+
+
+
+    //untuk shiftrow // berapa banyak shiftnya
+    static final int[] geser_baris = {0, 1, 2, 3};
+    //utk polinom, hasil penjabaran lanjut
+    static final int[] hasil_akhir = new int[256];
+    //utk polinom, perpangkatan , jika nilai adalah 5 maka X^2 dan X^0
+    static final int[] perpangkatan =  new int[256];
+    //implementasi gf(2^8) = galieo field
+    static {
+        int i, j;
+        // melakukan perkalian
+        //hasil dari perkalian
+        //perkalian biner
+        hasil_akhir[0] = 1;
+        for (i = 1; i < 256; i++) {
+            j = (hasil_akhir[i-1] << 1) ^ hasil_akhir[i-1];
+            if ((j & 0x100) != 0)
+                j ^= gen_poli;
+            hasil_akhir[i] = j;
+        }
+        for (i = 1; i < 255; i++)
+            perpangkatan[hasil_akhir[i]] = i;
+    }
+
+    public aes() {
+    }
+
+
+    //polinomial jika benar maka kiri jika !=0 maka kanan/bawah
+    static final int kali (int a, int b) {
+//        Log.d("TAG", "mulasa: "+alog[(log[2 & 0xFF] + log[98 & 0xFF]) % 255]);
+//        Log.d("TAG", "mulasb: "+alog[(log[2 & 0xFF]) % 255]);
+//        Log.d("TAG", "mulasc: "+alog[(log[98 & 0xFF]) % 255]);
+//        Log.d("TAG", "mulasd: "+alog[(log[98 & 0xFF]) ]);
+//        Log.d("TAG", "mulasde: "+alog[(log[98 & 0xFF]) ]);
+        //operasi perkalian mixcolumn perkalian biner desimal
+        return (a != 0 && b != 0) ?
+                hasil_akhir[(perpangkatan[a & 0xFF] + perpangkatan[b & 0xFF]) % 255] :
+                0;
+    }
+
+
+    public byte[] AddroundKey(byte[] state,int round,int mode)
+    {
+        byte [] a = new byte[sizeblock];
+        byte [] Ker;
+
+        int i;
+
+        if (mode!=0)
+        {
+            Ker=dekripkunci[round];
+        }
+        else {
+            Ker = enkripsikunci[round];
+        }
+
+        for (i=0;i<sizeblock;i++)
+        {
+            a[i] = (byte)(state[i] ^ Ker[i]);
+        }
+        return (a);
+    }
+
+
+    public byte[] SubBytes(byte[] state, int round)
+    {
+        byte [] tempa = new byte[sizeblock];
+        int i;
+
+        for (i = 0; i < sizeblock; i++)
+            tempa[i] = (byte) Sbox[state[i] & 0xFF];
+
+        return (tempa);
+    }
+
+    public byte[] ShiftRows(byte[] state, int round)
+    {
+        byte [] a = new byte[sizeblock];
+        int    i, k, row;
+
+
+        // ShiftRows
+        for (i = 0; i < sizeblock; i++) {
+            row = i % panjang;
+            k = (i + (geser_baris[row] * panjang)) % sizeblock;    // get shifted byte index
+            a[i] = state[k];
+//                Log.d("TAG", "enkrpsishift: "+a[i]);
+
+        }
+        return (a);
+    }
+
+    public byte[] MixColumn(byte[] state, int round)
+    {
+        byte [] tempa = new byte[sizeblock];
+        int    i, col;
+
+        for (col = 0; col < kolom; col++) {
+            i = col * panjang;        // index col -> ngecasting hex ke desimal
+            tempa[i]   = (byte)(kali(0x02,state[i]) ^ kali(0x03,state[i+1]) ^ state[i+2] ^ state[i+3]);
+            tempa[i+1] = (byte)(state[i] ^ kali(0x02,state[i+1]) ^ kali(0x03,state[i+2]) ^ state[i+3]);
+            tempa[i+2] = (byte)(state[i] ^ state[i+1] ^ kali(0x02,state[i+2]) ^ kali(0x03,state[i+3]));
+            tempa[i+3] = (byte)(kali(0x03,state[i]) ^ state[i+1] ^ state[i+2] ^ kali(0x02,state[i+3]));
+        }
+
+        return (tempa);
+    }
+
+
+//    public byte[] enkrpsi(byte[] teksasli) {
+//        byte [] a = new byte[sizeblock];
+//        byte [] tempa = new byte[sizeblock];
 //
-//    /** AES key schedule round constant table.
-//     *  <p>See FIPS-197 section 5.1.1 or Stallings section 5.2.
-//     *  Note that hex values have been converted to decimal for easy table
-//     *  specification in Java, and that indexes start at 1, hence initial 0 entry.
-//     */
-//    static final byte[] rcon = {
-//            0,
-//            1, 2, 4, 8, 16, 32,
-//            64, -128, 27, 54, 108, -40,
-//            -85, 77, -102, 47, 94, -68,
-//            99, -58, -105, 53, 106, -44,
-//            -77, 125, -6, -17, -59, -111 };
+//        //teks asli dijadikan sebuah state dan XOR dengan ADDROUNDKEY // -> (byte) nanti jd hexa
+//        a=AddroundKey(teksasli,0,0);
 //
-//    /** Internal AES constants and variables. */
-//    public static final int
-//            COL_SIZE = 4,                // depth of each column in AES state variable
-//            NUM_COLS = BLOCK_SIZE / COL_SIZE,    // number of columns in AES state variable
-//            ROOT = 0x11B;                // generator polynomial used in GF(2^8)
+//        // Looping untuk Round 1 - min terakhir karena round akhir tidak pakai mix
+//        for (int r = 1; r < pakairounds; r++) {
+//            //kunci yang dipakai
 //
-//    /** define ShiftRows transformation as shift amount for each row in state. */
-//    static final int[] row_shift = {0, 1, 2, 3};
+//            // SubBytes dengan S-Box  //masking
+//            tempa=SubBytes(a,r);
 //
-//    /* alog table for field GF(2^m) used to speed up multiplications. */
-//    static final int[] alog = new int[256];
-//    /* log table for field GF(2^m) used to speed up multiplications. */
-//    static final int[] log =  new int[256];
+//            // ShiftRows
+//            a=ShiftRows(tempa,r);
 //
-//    /** static code to initialise the log and alog tables.
-//     *  Used to implement multiplication in GF(2^8).
-//     */
-//    static {
-//        int i, j;
-//        // produce log and alog tables, needed for multiplying in the field GF(2^8)
-//        alog[0] = 1;
-//        for (i = 1; i < 256; i++) {
-//            j = (alog[i-1] << 1) ^ alog[i-1];
-//            if ((j & 0x100) != 0) j ^= ROOT;
-//            alog[i] = j;
-//        }
-//        for (i = 1; i < 255; i++) log[alog[i]] = i;
-//    }
 //
-//    /** Construct AES object. */
-//    public aes() {
-//    }
+//            // MixColumns (state) ke ta
+//            tempa=MixColumn(a,r);
 //
-//    /** return number of rounds for a given AES key size.
-//     *
-//     * @param keySize    size of the user key material in bytes.
-//     * @return        number of rounds for a given AES key size.
-//     */
-//    public static int getRounds (int keySize) {
-//        switch (keySize) {
-//            case 16:    // 16 byte = 128 bit key
-//                return 10;
-//            case 24:    // 24 byte = 192 bit key
-//                return 12;
-//            default:    // 32 byte = 256 bit key
-//                return 14;
-//        }
-//    }
-//
-//    /** multiply two elements of GF(2^8).
-//     *  <p>Using pre-computed log and alog tables for speed.
-//     *
-//     *  @param a 1st value to multiply
-//     *  @param b 2nd value to multiply
-//     *  @return product of a * b module its generator polynomial
-//     */
-//    static final int mul (int a, int b) {
-//        return (a != 0 && b != 0) ?
-//                alog[(log[a & 0xFF] + log[b & 0xFF]) % 255] :
-//                0;
-//    }
-//
-//    /** diagnostic trace of static tables. */
-//    public static void trace_static() {
-//        int i,j;
-//        System.out.print("AES Static Tablesn");
-//        System.out.print("S[] = n"); for(i=0;i<16;i++) { for(j=0;j<16;j++) System.out.print(Util.toHEX1(S[i*16+j])+", "); System.out.println();}
-//        System.out.print("Si[] = n"); for(i=0;i<16;i++) { for(j=0;j<16;j++) System.out.print(Util.toHEX1(Si[i*16+j])+", "); System.out.println();}
-//        System.out.print("rcon[] = n"); for(i=0;i<5;i++) {for(j=0;j<6;j++) System.out.print(Util.toHEX1(rcon[i*6+j])+", "); System.out.println();}
-//        System.out.print("log[] = n"); for(i=0;i<32;i++) {for(j=0;j<8;j++) System.out.print(Util.toHEX1(log[i*8+j])+", "); System.out.println();}
-//        System.out.print("alog[] = n"); for(i=0;i<32;i++) {for(j=0;j<8;j++) System.out.print(Util.toHEX1(alog[i*8+j])+", "); System.out.println();}
-//    }
-//
-//    //......................................................................
-//    /**
-//     * AES encrypt 128-bit plaintext using key previously set.
-//     *
-//     * <p>Follows cipher specification given in FIPS-197 section 5.1
-//     * See pseudo code in Fig 5, and details in this section.
-//     *
-//     * @param plain the 128-bit plaintext value to encrypt.
-//     * @return the encrypted 128-bit ciphertext value.
-//     */
-//    @SuppressWarnings("unused")
-//    public byte[] encrypt(byte[] plain) {
-//        // define working variables
-//        byte [] a = new byte[BLOCK_SIZE];    // AES state variable
-//        byte [] ta = new byte[BLOCK_SIZE];    // AES temp state variable
-//        byte [] Ker;                // encrypt keys for current round
-//        int    i, j, k, row, col;
-//
-//        traceInfo = "";                // reset trace info
-//        if (traceLevel > 0) traceInfo = "encryptAES(" + Util.toHEX1(plain) + ")";
-//
-//        // check for bad arguments
-//        if (plain == null)
-//            throw new IllegalArgumentException("Empty plaintext");
-//        if (plain.length != BLOCK_SIZE)
-//            throw new IllegalArgumentException("Incorrect plaintext length");
-//
-//        // copy plaintext bytes into state and do initial AddRoundKey(state)
-//        Ker = Ke[0];
-//        for (i = 0; i < BLOCK_SIZE; i++)    a[i] = (byte)(plain[i] ^ Ker[i]);
-//        if (traceLevel > 2)
-//            traceInfo += "n  R0 (Key = "+Util.toHEX1(Ker)+")ntAK = "+Util.toHEX1(a);
-//        else if (traceLevel > 1)
-//            traceInfo += "n  R0 (Key = "+Util.toHEX1(Ker)+")t = "+Util.toHEX1(a);
-//
-//        // for each round except last, apply round transforms
-//        for (int r = 1; r < numRounds; r++) {
-//            Ker = Ke[r];            // get session keys for this round
-//            if (traceLevel > 1)    traceInfo += "n  R"+r+" (Key = "+Util.toHEX1(Ker)+")t";
-//
-//            // SubBytes(state) into ta using S-Box S
-//            for (i = 0; i < BLOCK_SIZE; i++) ta[i] = S[a[i] & 0xFF];
-//            if (traceLevel > 2)    traceInfo += "ntSB = "+Util.toHEX1(ta);
-//
-//            // ShiftRows(state) into a
-//            for (i = 0; i < BLOCK_SIZE; i++) {
-//                row = i % COL_SIZE;
-//                k = (i + (row_shift[row] * COL_SIZE)) % BLOCK_SIZE;    // get shifted byte index
-//                a[i] = ta[k];
-//            }
-//            if (traceLevel > 2)    traceInfo += "ntSR = "+Util.toHEX1(a);
-//
-//            // MixColumns(state) into ta
-//            //   implemented by expanding matrix mult for each column
-//            //   see FIPS-197 section 5.1.3
-//            for (col = 0; col < NUM_COLS; col++) {
-//                i = col * COL_SIZE;        // start index for this col
-//                ta[i]   = (byte)(mul(2,a[i]) ^ mul(3,a[i+1]) ^ a[i+2] ^ a[i+3]);
-//                ta[i+1] = (byte)(a[i] ^ mul(2,a[i+1]) ^ mul(3,a[i+2]) ^ a[i+3]);
-//                ta[i+2] = (byte)(a[i] ^ a[i+1] ^ mul(2,a[i+2]) ^ mul(3,a[i+3]));
-//                ta[i+3] = (byte)(mul(3,a[i]) ^ a[i+1] ^ a[i+2] ^ mul(2,a[i+3]));
-//            }
-//            if (traceLevel > 2)    traceInfo += "ntMC = "+Util.toHEX1(ta);
-//
-//            // AddRoundKey(state) into a
-//            for (i = 0; i < BLOCK_SIZE; i++)    a[i] = (byte)(ta[i] ^ Ker[i]);
-//            if (traceLevel > 2)    traceInfo += "ntAK";
-//            if (traceLevel > 1)    traceInfo += " = "+Util.toHEX1(a);
+//            // AddRoundKey
+//            a=AddroundKey(tempa,r,0);
 //        }
 //
-//        // last round is special - only has SubBytes, ShiftRows and AddRoundKey
-//        Ker = Ke[numRounds];            // get session keys for final round
-//        if (traceLevel > 1)    traceInfo += "n  R"+numRounds+" (Key = "+Util.toHEX1(Ker)+")t";
+//        // Round AKhir
+//        // SubBytes Akhr
+//        a=SubBytes(a,pakairounds);
 //
-//        // SubBytes(state) into a using S-Box S
-//        for (i = 0; i < BLOCK_SIZE; i++) a[i] = S[a[i] & 0xFF];
-//        if (traceLevel > 2)    traceInfo += "ntSB = "+Util.toHEX1(a);
+//        // ShiftRowsAkhir
+//        tempa=ShiftRows(a,pakairounds);
 //
-//        // ShiftRows(state) into ta
-//        for (i = 0; i < BLOCK_SIZE; i++) {
-//            row = i % COL_SIZE;
-//            k = (i + (row_shift[row] * COL_SIZE)) % BLOCK_SIZE;    // get shifted byte index
-//            ta[i] = a[k];
-//        }
-//        if (traceLevel > 2)    traceInfo += "ntSR = "+Util.toHEX1(a);
-//
-//        // AddRoundKey(state) into a
-//        for (i = 0; i < BLOCK_SIZE; i++)    a[i] = (byte)(ta[i] ^ Ker[i]);
-//        if (traceLevel > 2)    traceInfo += "ntAK";
-//        if (traceLevel > 1)    traceInfo += " = "+Util.toHEX1(a)+"n";
-//        if (traceLevel > 0)    traceInfo += " = "+Util.toHEX1(a)+"n";
+//        // AddRoundKey
+//        a=AddroundKey(tempa,pakairounds,0);
 //        return (a);
 //    }
+
+
+    public byte[] enkrpsi(byte[] teksasli) {
+        byte [] a = new byte[sizeblock];
+        byte [] tempa = new byte[sizeblock];
+        byte [] Ker;
+        int    i, k, row, col;
+
+
+
+        //teks asli dijadikan sebuah state dan XOR dengan ADDROUNDKEY // -> (byte) nanti jd hexa
+        Ker = enkripsikunci[0];
+        for (i = 0; i < sizeblock; i++)
+            a[i] = (byte)(teksasli[i] ^ Ker[i]);
+
+        // Looping untuk Round 1 - min terakhir karena round akhir tidak pakai mix
+        for (int r = 1; r < pakairounds; r++) {
+            //kunci yang dipakai
+            Ker = enkripsikunci[r];
+
+            // SubBytes dengan S-Box  //masking
+            for (i = 0; i < sizeblock; i++)
+                tempa[i] = (byte) Sbox[a[i] & 0xFF];
+
+            // ShiftRows
+            for (i = 0; i < sizeblock; i++) {
+                row = i % panjang;
+                k = (i + (geser_baris[row] * panjang)) % sizeblock;    // get shifted byte index
+                a[i] = tempa[k];
+//                Log.d("TAG", "enkrpsishift: "+a[i]);
+
+            }
+
+            // MixColumns (state) ke ta
+            for (col = 0; col < kolom; col++) {
+                i = col * panjang;        // index col -> ngecasting hex ke desimal
+                tempa[i]   = (byte)(kali(0x02,a[i]) ^ kali(0x03,a[i+1]) ^ a[i+2] ^ a[i+3]);
+                tempa[i+1] = (byte)(a[i] ^ kali(0x02,a[i+1]) ^ kali(0x03,a[i+2]) ^ a[i+3]);
+                tempa[i+2] = (byte)(a[i] ^ a[i+1] ^ kali(0x02,a[i+2]) ^ kali(0x03,a[i+3]));
+                tempa[i+3] = (byte)(kali(0x03,a[i]) ^ a[i+1] ^ a[i+2] ^ kali(0x02,a[i+3]));
+            }
+
+            // AddRoundKey
+            for (i = 0; i < sizeblock; i++)
+                a[i] = (byte)(tempa[i] ^ Ker[i]);
+        }
+
+        // Round AKhir
+        Ker = enkripsikunci[pakairounds];
+
+        // SubBytes Akhr
+        for (i = 0; i < sizeblock; i++)
+            a[i] = (byte) Sbox[a[i] & 0xFF];
+
+        // ShiftRowsAkhir
+        for (i = 0; i < sizeblock; i++) {
+            row = i % panjang;
+            k = (i + (geser_baris[row] * panjang)) % sizeblock;
+            tempa[i] = a[k];
+        }
+
+        // AddRoundKey
+        for (i = 0; i < sizeblock; i++)
+            a[i] = (byte)(tempa[i] ^ Ker[i]);
+        return (a);
+    }
+
+
+
+
+    public byte[] InvSubBytes(byte[] state, int round)
+    {
+        byte [] tempa = new byte[sizeblock];
+        int i;
+
+        for (i = 0; i < sizeblock; i++)
+            tempa[i] = (byte) inversSbox[state[i] & 0xFF];
+
+        return (tempa);
+    }
+
+    public byte[] InvShiftRows(byte[] state, int round)
+    {
+        byte [] tempa = new byte[sizeblock];
+        int i, k, row;
+
+
+        // ShiftRows
+        for (i = 0; i < sizeblock; i++) {
+            row = i % panjang;
+            // Shift index byte
+            k = (i + sizeblock - (geser_baris[row] * panjang)) % sizeblock;
+            tempa[i] = state[k];
+//                Log.d("TAG", "enkrpsishift: "+a[i]);
+
+        }
+        return (tempa);
+    }
+
+    public byte[] InvMixColumn(byte[] state, int round)
+    {
+        byte [] a = new byte[sizeblock];
+        int i, col;
+
+        for (col = 0; col < kolom; col++) {
+            i = col * panjang;        // start index col
+            a[i]   = (byte)(kali(0x0e,state[i]) ^ kali(0x0b,state[i+1]) ^ kali(0x0d,state[i+2]) ^ kali(0x09,state[i+3]));
+            a[i+1] = (byte)(kali(0x09,state[i]) ^ kali(0x0e,state[i+1]) ^ kali(0x0b,state[i+2]) ^ kali(0x0d,state[i+3]));
+            a[i+2] = (byte)(kali(0x0d,state[i]) ^ kali(0x09,state[i+1]) ^ kali(0x0e,state[i+2]) ^ kali(0x0b,state[i+3]));
+            a[i+3] = (byte)(kali(0x0b,state[i]) ^ kali(0x0d,state[i+1]) ^ kali(0x09,state[i+2]) ^ kali(0x0e,state[i+3]));
+        }
+
+        return (a);
+    }
+
+
+    public byte[] dekrpsi(byte[] chiper) {
+        byte [] a = new byte[sizeblock];
+        byte [] tempa = new byte[sizeblock];
+
+
+
+        // chiper jadikan state XOR addroundkey
+        a=AddroundKey(chiper,0,1);
+
+        // Round utk decrypt
+        for (int r = 1; r < pakairounds; r++) {
+
+            // Inverse ShiftRows
+            tempa=InvShiftRows(a,r);
+
+            // Inverse SubBytes dengan Inveres Sbox
+            a=InvSubBytes(tempa,r);
+
+            // AddRound Key
+            tempa=AddroundKey(a,r,1);
+
+            // Inverse MixColum
+            a=InvMixColumn(tempa,r);
+        }
+
+        // Round Akhir No MIxColumn
+
+        tempa=InvShiftRows(a,pakairounds);
+        a=InvSubBytes(tempa,pakairounds);
+        tempa=AddroundKey(a,pakairounds,1);
+
+
+        return (tempa);
+    }
+
+
+//    public byte[] dekrpsi(byte[] chiper) {
+//        byte [] a = new byte[sizeblock];
+//        byte [] tempa = new byte[sizeblock];
+//        byte [] Kdr;
+//        int    i, k, row, col;
 //
 //
-//    //......................................................................
-//    /**
-//     * AES decrypt 128-bit ciphertext using key previously set.
-//     *
-//     * <p>Follows cipher specification given in FIPS-197 section 5.3
-//     * See pseudo code in Fig 5, and details in this section.
-//     *
-//     * @param cipher the 128-bit ciphertext value to decrypt.
-//     * @return the decrypted 128-bit plaintext value.
-//     */
-//    @SuppressWarnings("unused")
-//    public byte[] decrypt(byte[] cipher) {
-//        // define working variables
-//        byte [] a = new byte[BLOCK_SIZE];    // AES state variable
-//        byte [] ta = new byte[BLOCK_SIZE];    // AES temp state variable
-//        byte [] Kdr;                // encrypt keys for current round
-//        int    i, j, k, row, col;
 //
-//        traceInfo = "";                // reset trace info
-//        if (traceLevel > 0) traceInfo = "decryptAES(" + Util.toHEX1(cipher) + ")";
+//        // chiper jadikan state XOR addroundkey
+//        Kdr = dekripkunci[0];
+//        for (i = 0; i < sizeblock; i++)
+//            a[i] = (byte)(chiper[i] ^ Kdr[i]);
 //
-//        // check for bad arguments
-//        if (cipher == null)
-//            throw new IllegalArgumentException("Empty ciphertext");
-//        if (cipher.length != BLOCK_SIZE)
-//            throw new IllegalArgumentException("Incorrect ciphertext length");
+//        // Round utk decrypt
+//        for (int r = 1; r < pakairounds; r++) {
+//            Kdr = dekripkunci[r];            // keys
 //
-//        // copy ciphertext bytes into state and do initial AddRoundKey(state)
-//        Kdr = Kd[0];
-//        for (i = 0; i < BLOCK_SIZE; i++)    a[i] = (byte)(cipher[i] ^ Kdr[i]);
-//        if (traceLevel > 2)
-//            traceInfo += "n  R0 (Key = "+Util.toHEX1(Kdr)+")nt AK = "+Util.toHEX1(a);
-//        else if (traceLevel > 1)
-//            traceInfo += "n  R0 (Key = "+Util.toHEX1(Kdr)+")t = "+Util.toHEX1(a);
-//
-//        // for each round except last, apply round transforms
-//        for (int r = 1; r < numRounds; r++) {
-//            Kdr = Kd[r];            // get session keys for this round
-//            if (traceLevel > 1)    traceInfo += "n  R"+r+" (Key = "+Util.toHEX1(Kdr)+")t";
-//
-//            // InvShiftRows(state) into ta (nb. same shift as encrypt but subtract)
-//            for (i = 0; i < BLOCK_SIZE; i++) {
-//                row = i % COL_SIZE;
-//                // get shifted byte index
-//                k = (i + BLOCK_SIZE - (row_shift[row] * COL_SIZE)) % BLOCK_SIZE;
-//                ta[i] = a[k];
+//            // Inverse ShiftRows
+//            for (i = 0; i < sizeblock; i++) {
+//                row = i % panjang;
+//                // Shift index byte
+//                k = (i + sizeblock - (geser_baris[row] * panjang)) % sizeblock;
+//                tempa[i] = a[k];
 //            }
-//            if (traceLevel > 2)    traceInfo += "ntISR = "+Util.toHEX1(ta);
 //
-//            // InvSubBytes(state) into a using inverse S-box Si
-//            for (i = 0; i < BLOCK_SIZE; i++) a[i] = Si[ta[i] & 0xFF];
-//            if (traceLevel > 2)    traceInfo += "ntISB = "+Util.toHEX1(a);
+//            // Inverse SubBytes dengan Inveres Sbox
+//            for (i = 0; i < sizeblock; i++)
+//                a[i] = inversSbox[tempa[i] & 0xFF];
 //
-//            // AddRoundKey(state) into ta
-//            for (i = 0; i < BLOCK_SIZE; i++)    ta[i] = (byte)(a[i] ^ Kdr[i]);
-//            if (traceLevel > 2)    traceInfo += "nt AK = "+Util.toHEX1(ta);
+//            // AddRound Key
+//            for (i = 0; i < sizeblock; i++)
+//                tempa[i] = (byte)(a[i] ^ Kdr[i]);
 //
-//            // InvMixColumns(state) into a
-//            //   implemented by expanding matrix mult for each column
-//            //   see FIPS-197 section 5.3.3
-//            for (col = 0; col < NUM_COLS; col++) {
-//                i = col * COL_SIZE;        // start index for this col
-//                a[i]   = (byte)(mul(0x0e,ta[i]) ^ mul(0x0b,ta[i+1]) ^ mul(0x0d,ta[i+2]) ^ mul(0x09,ta[i+3]));
-//                a[i+1] = (byte)(mul(0x09,ta[i]) ^ mul(0x0e,ta[i+1]) ^ mul(0x0b,ta[i+2]) ^ mul(0x0d,ta[i+3]));
-//                a[i+2] = (byte)(mul(0x0d,ta[i]) ^ mul(0x09,ta[i+1]) ^ mul(0x0e,ta[i+2]) ^ mul(0x0b,ta[i+3]));
-//                a[i+3] = (byte)(mul(0x0b,ta[i]) ^ mul(0x0d,ta[i+1]) ^ mul(0x09,ta[i+2]) ^ mul(0x0e,ta[i+3]));
+//            // Inverse MixColum
+//            for (col = 0; col < kolom; col++) {
+//                i = col * panjang;        // start index col
+//                a[i]   = (byte)(kali(0x0e,tempa[i]) ^ kali(0x0b,tempa[i+1]) ^ kali(0x0d,tempa[i+2]) ^ kali(0x09,tempa[i+3]));
+//                a[i+1] = (byte)(kali(0x09,tempa[i]) ^ kali(0x0e,tempa[i+1]) ^ kali(0x0b,tempa[i+2]) ^ kali(0x0d,tempa[i+3]));
+//                a[i+2] = (byte)(kali(0x0d,tempa[i]) ^ kali(0x09,tempa[i+1]) ^ kali(0x0e,tempa[i+2]) ^ kali(0x0b,tempa[i+3]));
+//                a[i+3] = (byte)(kali(0x0b,tempa[i]) ^ kali(0x0d,tempa[i+1]) ^ kali(0x09,tempa[i+2]) ^ kali(0x0e,tempa[i+3]));
 //            }
-//            if (traceLevel > 2)    traceInfo += "ntIMC";
-//            if (traceLevel > 1)    traceInfo += " = "+Util.toHEX1(a);
 //        }
 //
-//        // last round is special - only has InvShiftRows, InvSubBytes and AddRoundKey
-//        Kdr = Kd[numRounds];            // get session keys for final round
-//        if (traceLevel > 1)    traceInfo += "n  R"+numRounds+" (Key = "+Util.toHEX1(Kdr)+")t";
+//        // Round Akhir No MIxColumn
+//        Kdr = dekripkunci[pakairounds];            // keys get akhuir
 //
-//        // InvShiftRows(state) into ta
-//        for (i = 0; i < BLOCK_SIZE; i++) {
-//            row = i % COL_SIZE;
-//            // get shifted byte index
-//            k = (i + BLOCK_SIZE - (row_shift[row] * COL_SIZE)) % BLOCK_SIZE;
-//            ta[i] = a[k];
+//        for (i = 0; i < sizeblock; i++) {
+//            row = i % panjang;
+//            // Shift index byte
+//            k = (i + sizeblock - (geser_baris[row] * panjang)) % sizeblock;
+//            tempa[i] = a[k];
 //        }
-//        if (traceLevel > 2)    traceInfo += "ntISR = "+Util.toHEX1(a);
 //
-//        // InvSubBytes(state) into ta using inverse S-box Si
-//        for (i = 0; i < BLOCK_SIZE; i++) ta[i] = Si[ta[i] & 0xFF];
-//        if (traceLevel > 2)    traceInfo += "ntISB = "+Util.toHEX1(a);
+//        for (i = 0; i < sizeblock; i++)
+//            tempa[i] = inversSbox[tempa[i] & 0xFF];
 //
-//        // AddRoundKey(state) into a
-//        for (i = 0; i < BLOCK_SIZE; i++)    a[i] = (byte)(ta[i] ^ Kdr[i]);
-//        if (traceLevel > 2)    traceInfo += "nt AK";
-//        if (traceLevel > 1)    traceInfo += " = "+Util.toHEX1(a)+"n";
-//        if (traceLevel > 0)    traceInfo += " = "+Util.toHEX1(a)+"n";
+//        for (i = 0; i < sizeblock; i++)
+//            a[i] = (byte)(tempa[i] ^ Kdr[i]);
 //        return (a);
 //    }
-//
-//
-//    //......................................................................
-//    /**
-//     * Expand a user-supplied key material into a session key.
-//     * <p>See FIPS-197 Section 5.3 Fig 11 for details of the key expansion.
-//     * <p>Session keys will be saved in Ke and Kd instance variables,
-//     * along with numRounds being the number of rounds for this sized key.
-//     *
-//     * @param key        The 128/192/256-bit AES key to use.
-//     */
-//    @SuppressWarnings("unused")
-//    public void setKey(byte[] key) {
-//        // assorted internal constants
-//        final int BC = BLOCK_SIZE / 4;
-//        final int Klen = key.length;
-//        final int Nk = Klen / 4;
-//
-//        int i, j, r;
-//
-//        traceInfo = "";            // reset trace info
-//        if (traceLevel > 0) traceInfo = "setKey(" + Util.toHEX1(key) + ")n";
-//        // System.out.println(key.length);
-//        // check for bad arguments
-//        if (key == null)
-//            throw new IllegalArgumentException("Empty key");
-//        if (!(key.length == 16 || key.length == 24 || key.length == 32))
-//            throw new IllegalArgumentException("Incorrect key length");
-//
-//        // set master number of rounds given size of this key
-//        numRounds = getRounds(Klen);
-//        final int ROUND_KEY_COUNT = (numRounds + 1) * BC;
-//
-//        // allocate 4 arrays of bytes to hold the session key values
-//        // each array holds 1 of the 4 bytes [b0 b1 b2 b3] in each word w
-//        byte[] w0 = new byte[ROUND_KEY_COUNT];
-//        byte[] w1 = new byte[ROUND_KEY_COUNT];
-//        byte[] w2 = new byte[ROUND_KEY_COUNT];
-//        byte[] w3 = new byte[ROUND_KEY_COUNT];
-//
-//        // allocate arrays to hold en/decrypt session keys (by byte rather than word)
-//        Ke = new byte[numRounds + 1][BLOCK_SIZE]; // encryption round keys
-//        Kd = new byte[numRounds + 1][BLOCK_SIZE]; // decryption round keys
-//
-//        // copy key into start of session array (by word, each byte in own array)
-//        for (i=0, j=0; i < Nk; i++) {
-//            w0[i] = key[j++]; w1[i] = key[j++]; w2[i] = key[j++]; w3[i] = key[j++];
-//        }
-//
-//        // implement key expansion algorithm
-//        byte t0, t1, t2, t3, old0;        // temp byte values for each word
-//        for (i = Nk; i < ROUND_KEY_COUNT; i++) {
-//            t0 = w0[i-1]; t1 = w1[i-1]; t2 = w2[i-1]; t3 = w3[i-1];    // temp = w[i-1]
-//            if (i % Nk == 0) {
-//                // temp = SubWord(RotWord(temp)) ^ Rcon[i/Nk]
-//                old0 = t0;            // save old 1st byte value for t3 calc
-//                t0 = (byte)(S[t1 & 0xFF] ^ rcon[i/Nk]);    // nb. constant XOR 1st byte only
-//                t1 = (byte)(S[t2 & 0xFF]);
-//                t2 = (byte)(S[t3 & 0xFF]);    // nb. RotWord done by reordering bytes used
-//                t3 = (byte)(S[old0 & 0xFF]);
-//            }
-//            else if ((Nk > 6) && (i % Nk == 4)) {
-//                // temp = SubWord(temp)
-//                t0 = S[t0 & 0xFF]; t1 = S[t1 & 0xFF]; t2 = S[t2 & 0xFF]; t3 = S[t3 & 0xFF];
-//            }
-//            // w[i] = w[i-Nk] ^ temp
-//            w0[i] = (byte)(w0[i-Nk] ^ t0);
-//            w1[i] = (byte)(w1[i-Nk] ^ t1);
-//            w2[i] = (byte)(w2[i-Nk] ^ t2);
-//            w3[i] = (byte)(w3[i-Nk] ^ t3);
-//        }
-//
-//        // now copy values into en/decrypt session arrays by round & byte in round
-//        for (r = 0, i = 0; r < numRounds + 1; r++) {    // for each round
-//            for (j = 0; j < BC; j++) {        // for each word in round
-//                Ke[r][4*j] = w0[i];
-//                Ke[r][4*j+1] = w1[i];
-//                Ke[r][4*j+2] = w2[i];
-//                Ke[r][4*j+3] = w3[i];
-//                Kd[numRounds - r][4*j] = w0[i];
-//                Kd[numRounds - r][4*j+1] = w1[i];
-//                Kd[numRounds - r][4*j+2] = w2[i];
-//                Kd[numRounds - r][4*j+3] = w3[i];
-//                i++;
-//            }
-//        }
-//
-//        // create trace info if needed
-//        if (traceLevel > 3) {
-//            traceInfo += "  Encrypt Round keys:n";
-//            for(r=0;r<numRounds+1;r++) traceInfo += "  R"+r+"t = "+Util.toHEX1(Ke[r])+"n";
-//            traceInfo += "  Decrypt Round keys:n";
-//            for(r=0;r<numRounds+1;r++) traceInfo += "  R"+r+"t = "+Util.toHEX1(Kd[r])+"n";
-//        }
-//    }
-//
-//
-////    /** self-test routine for AES cipher
-////     *  @param hkey    key to test in hex
-////     *  @param hplain    plaintext to test in hex
-////     *  @param hcipher    ciphertext to test in hex
-////     *  @param lev    trace level to use
-////     */
-// /*   public static void self_test (byte [] key, String hplain, String hcipher, int lev) {
-//
-//        // AES test triple (128-bit key test value from FIPS-197)
-////        byte [] key    = Util.hex2byte(hkey);
-//        byte [] plain    = Util.hex2byte(hplain);
-//        byte [] cipher    = Util.hex2byte(hcipher);
-//    byte [] result;
-//
-//    AES testAES = new AES();    // create new AES instance to test triple
-//    testAES.traceLevel = lev;    // select level of trace info
-//    testAES.setKey(key);        // set key and display trace info
-//        System.out.println(testAES.traceInfo);
-//       // System.out.println(plain.length);
-//    result = testAES.encrypt(plain);    // test encryption
-//        System.out.println(testAES.traceInfo);
-//    if (Arrays.equals(result, cipher))
-//        System.out.println("Test OKn");
-//    else
-//    	System.out.println(result.length);
-//    	System.out.println(cipher.length);
-//        System.out.println("Test Failed. Result was "+Util.toHEX(result)+"n");
-//
-//    result = testAES.decrypt(cipher);    // test decryption
-//        System.out.println(testAES.traceInfo);
-//    if (Arrays.equals(result, plain))
-//        System.out.println("Test OKn");
-//    else
-//    	System.out.println(result.length);
-//		System.out.println(cipher.length);
-//        System.out.println("Test Failed. Result was "+Util.toHEX(result)+"n");
-//        System.out.println();
-//    }*/
-//
-//
-//
-//
-//    public static String static_byteArrayToString(byte[] data) {
-//        String res = "";
-//        StringBuffer sb = new StringBuffer();
-//        for(int i=0; i<data.length; i++) {
-//            int n = (int) data[i];
-//            if(n<0) n += 256;
-//            sb.append((char) n);
-//        }
-//        res = sb.toString();
-//        return res;
-//    }
-//
-//    public static byte[] static_stringToByteArray(String s){
-//        byte[] temp = new byte[s.length()];
-//        for(int i=0;i<s.length();i++){
-//            temp[i] = (byte) s.charAt(i);
-//        }
-//        return temp;
-//    }
-//
-//    public static String static_intArrayToString(int[]t){
-//        StringBuffer sb = new StringBuffer();
-//        for(int i=0;i<t.length;i++){
-//            sb.append((char)t[i]);
-//        }
-//        return sb.toString();
-//    }
-//
-//    /** self-test routine for AES cipher
-////     @param args command line arguments
-////     */
-//
-//    public String _cryptAll(String data, int mode)  {
-//        aes aes = this;
-//        int rest = data.length()-((int) data.length()/16)*16;
-//        if(rest>0) {
-//            //int rest = data.length()-((int) data.length()/16)*16;
-//            for(int i=0; i<16-rest; i++)
-//                data =data+" ";
-//        }
-//        int nParts = (int) data.length()/16;
-//        System.out.println(nParts);
-//        System.out.println(data.length());
-//        byte[] res = new byte[data.length()];
-//        String partStr = "";
-//        System.out.println(partStr);
-//
-//        byte[] partByte = new byte[16];
-//        for(int p=0; p<nParts; p++) {
-//            partStr = data.substring(p*16, p*16+16);
-//            partByte = static_stringToByteArray(partStr);
-//            System.out.println(partByte);
-//
-//            if(mode==1) partByte = aes.encrypt(partByte);
-//            if(mode==2) partByte = aes.decrypt(partByte);
-//            for(int b=0; b<16; b++)
-//                res[p*16+b] = partByte[b];
-//        }
-//        return static_byteArrayToString(res);
-//    }
-//
-//    public String Encrypt(String data) {
-//        return _cryptAll(data, 1);
-//    }
-//    public String Decrypt(String data) {
-//        return _cryptAll(data, 2);
-//    }
-//
-//    public void setKey(String key) {
-//        //System.out.println("CRYPT KEY IS "+key);
-//        setKey(static_stringToByteArray(key));
-//    }
-//
-//
-//    /** self-test routine for AES cipher
-//     *  @param hkey    key to test in hex
-//     *  @param hplain    plaintext to test in hex
-//     *  @param hcipher    ciphertext to test in hex
-//     *  @param lev    trace level to use
-//     */
-//    public static void self_test (String hkey, String hplain, String hcipher, int lev) {
-//
-//        // AES test triple (128-bit key test value from FIPS-197)
-//        byte [] key    = Util.hex2byte(hkey);
-//        byte [] plain    = Util.hex2byte(hplain);
-//        byte [] cipher    = Util.hex2byte(hcipher);
-//        byte [] result;
-//
-//        aes testAES = new aes();    // create new AES instance to test triple
-//        testAES.traceLevel = lev;    // select level of trace info
-//        testAES.setKey(key);        // set key and display trace info
-//        System.out.print(testAES.traceInfo);
-//
-//        result = testAES.encrypt(plain);    // test encryption
-//        System.out.print(testAES.traceInfo);
-//        if (Arrays.equals(result, cipher))
-//            System.out.print("Test OKn");
-//        else
-//            System.out.print("Test Failed. Result was "+Util.toHEX(result)+"n");
-//
-//        result = testAES.decrypt(cipher);    // test decryption
-//        System.out.print(testAES.traceInfo);
-//        if (Arrays.equals(result, plain))
-//            System.out.print("Test OKn");
-//        else
-//            System.out.print("Test Failed. Result was "+Util.toHEX(result)+"n");
-//        System.out.println();
-//    }
-//
-//
-//
-//
-////    @RequiresApi(api = Build.VERSION_CODES.O)
-////    public static String static_byteArrayToString(byte[] data) {
-////        String res = "";
-////        StringBuffer sb = new StringBuffer();
-////        for(int i=0; i<data.length; i++) {
-////            int n = (int) data[i];
-//////            if(n<0) n += 128;
-////            if(n<0) n += 256;
-////            sb.append((char) n);
-////        }
-//////        res= Base64.getEncoder().encodeToString(data);
-////        res = sb.toString();
-////
-////        return res;
-////    }
-////
-////    public static byte[] static_stringToByteArray(String s){
-////        byte[] temp = new byte[s.length()];
-////        for(int i=0;i<s.length();i++){
-////            temp[i] = (byte) s.charAt(i);
-//////            Log.d("TAG", "static_stringToByteArray: "+temp[i]);
-////        }
-//////        Log.d("TAG", "panjang: "+s.length());
-////
-//////        Log.d("TAG", "static_stringToByteArray: "+temp);
-////
-////        return temp;
-////    }
-////
-////    public static String static_intArrayToString(int[]t){
-////        StringBuffer sb = new StringBuffer();
-////        for(int i=0;i<t.length;i++){
-////            sb.append((char)t[i]);
-////        }
-////        return sb.toString();
-////    }
-////
-////    /** self-test routine for AES cipher
-////    // @param args command line arguments
-////     */
-////
-////    @RequiresApi(api = Build.VERSION_CODES.O)
-////    public String _cryptAll(String data, int mode)  {
-////        aes aes = this;
-////        if(data.length()/16 > ((int) data.length()/16)) {
-////            int rest = data.length()-((int) data.length()/16)*16;
-////            for(int i=0; i<rest; i++)
-////                data += " ";
-////        }
-////        int nParts = (int) data.length()/16;
-////        byte[] res = new byte[data.length()];
-////        String partStr = "";
-////        byte[] partByte = new byte[16];
-////        for(int p=0; p<nParts; p++) {
-////            partStr = data.substring(p*16, p*16+16);
-////            partByte = static_stringToByteArray(partStr);
-////            if(mode==1) partByte = aes.encrypt(partByte);
-////            if(mode==2) partByte = aes.decrypt(partByte);
-////            for(int b=0; b<16; b++)
-////                res[p*16+b] = partByte[b];
-////        }
-////        return static_byteArrayToString(res);
-////    }
-////
-////    @RequiresApi(api = Build.VERSION_CODES.O)
-////    public String Encrypt(String data) {
-////        while((data.length() % 32) != 0) data += " ";
-////        return _cryptAll(data, 1);
-////    }
-////    @RequiresApi(api = Build.VERSION_CODES.O)
-////    public String Decrypt(String data) {
-////        return _cryptAll(data, 2).trim();
-////    }
-////
-////    public void setKey(String key) {
-////        //System.out.println("CRYPT KEY IS "+key);
-////        setKey(static_stringToByteArray(key));
-////    }
-//
-////
-////    /**
-////     *   collection of utility routines for converting and displaying binary
-////     *   saved in byte/short/int arrays, and loaded/displayed using hex.
-////     *
-////     *   @author Lawrie Brown, Oct 2001
-////     */
-////    public static class Util {
-////
-////        //......................................................................
-////        // utility conversions between byte, short and int arrays
-////
-////        public static byte[] short2byte (short[] sa) {
-////            int length = sa.length;
-////            byte[] ba = new byte[length * 2];
-////            for (int i = 0, j = 0, k; i < length; ) {
-////                k = sa[i++];
-////                ba[j++] = (byte)((k >>> 8) & 0xFF);
-////                ba[j++] = (byte)( k        & 0xFF);
-////            }
-////            return (ba);
-////        }
-////
-////        //......................................................................
-////        public static short[] byte2short (byte[] ba) {
-////            int length = ba.length;
-////            short[] sa = new short[length / 2];
-////            for (int i = 0, j = 0; j < length / 2; ) {
-////                sa[j++] = (short)(((ba[i++] & 0xFF) <<  8) |
-////                        ((ba[i++] & 0xFF)      ));
-////            }
-////            return (sa);
-////        }
-////
-////        //......................................................................
-////        public static byte[] int2byte (int[] ia) {
-////            int length = ia.length;
-////            byte[] ba = new byte[length * 4];
-////            for (int i = 0, j = 0, k; i < length; ) {
-////                k = ia[i++];
-////                ba[j++] = (byte)((k >>>24) & 0xFF);
-////                ba[j++] = (byte)((k >>>16) & 0xFF);
-////                ba[j++] = (byte)((k >>> 8) & 0xFF);
-////                ba[j++] = (byte)( k        & 0xFF);
-////            }
-////            return (ba);
-////        }
-////
-////        //......................................................................
-////        public static int[] byte2int (byte[] ba) {
-////            int length = ba.length;
-////            int[] ia = new int[length / 4];
-////            for (int i = 0, j = 0; j < length / 4; ) {
-////                ia[j++] = (((ba[i++] & 0xFF) << 24) |
-////                        ((ba[i++] & 0xFF) << 16) |
-////                        ((ba[i++] & 0xFF) <<  8) |
-////                        ((ba[i++] & 0xFF)      ));
-////            }
-////            return (ia);
-////        }
-////
-////        //......................................................................
-////        // utility methods (adapted from cryptix.util.core.Hex class)
-////
-////        /** array mapping hex value (0-15) to corresponding hex digit (0-9a-f). */
-////        public static final char[] HEX_DIGITS = {
-////                '0','1','2','3','4','5','6','7','8','9','a','b','c','d','e','f'
-////        };
-////
-////        /**
-////         * utility method to convert a byte array to a hexadecimal string.
-////         * <p>
-////         * Each byte of the input array is converted to 2 hex symbols,
-////         * using the HEX_DIGITS array for the mapping, with spaces after each pair.
-////         * @param ba array of bytes to be converted into hex
-////         * @return hex representation of byte array
-////         */
-////        public static String toHEX (byte[] ba) {
-////            int length = ba.length;
-////            char[] buf = new char[length * 3];
-////            for (int i = 0, j = 0, k; i < length; ) {
-////                k = ba[i++];
-////                buf[j++] = HEX_DIGITS[(k >>> 4) & 0x0F];
-////                buf[j++] = HEX_DIGITS[ k        & 0x0F];
-////                buf[j++] = ' ';
-////            }
-////            return new String(buf);
-////        }
-////
-////        /**
-////         * utility method to convert a short array to a hexadecimal string.
-////         * <p>
-////         * Each word of the input array is converted to 4 hex symbols,
-////         * using the HEX_DIGITS array for the mapping, with spaces after every 4.
-////         * @param ia array of shorts to be converted into hex
-////         * @return hex representation of short array
-////         */
-////        public static String toHEX (short[] ia) {
-////            int length = ia.length;
-////            char[] buf = new char[length * 5];
-////            for (int i = 0, j = 0, k; i < length; ) {
-////                k = ia[i++];
-////                buf[j++] = HEX_DIGITS[(k >>>12) & 0x0F];
-////                buf[j++] = HEX_DIGITS[(k >>> 8) & 0x0F];
-////                buf[j++] = HEX_DIGITS[(k >>> 4) & 0x0F];
-////                buf[j++] = HEX_DIGITS[ k        & 0x0F];
-////                buf[j++] = ' ';
-////            }
-////            return new String(buf);
-////        }
-////
-////        /**
-////         * utility method to convert an int array to a hexadecimal string.
-////         * <p>
-////         * Each word of the input array is converted to 8 hex symbols,
-////         * using the HEX_DIGITS array for the mapping, with spaces after every 4.
-////         * @param ia array of ints to be converted into hex
-////         * @return hex representation of int array
-////         */
-////        public static String toHEX (int[] ia) {
-////            int length = ia.length;
-////            char[] buf = new char[length * 10];
-////            for (int i = 0, j = 0, k; i < length; ) {
-////                k = ia[i++];
-////                buf[j++] = HEX_DIGITS[(k >>>28) & 0x0F];
-////                buf[j++] = HEX_DIGITS[(k >>>24) & 0x0F];
-////                buf[j++] = HEX_DIGITS[(k >>>20) & 0x0F];
-////                buf[j++] = HEX_DIGITS[(k >>>16) & 0x0F];
-////                buf[j++] = ' ';
-////                buf[j++] = HEX_DIGITS[(k >>>12) & 0x0F];
-////                buf[j++] = HEX_DIGITS[(k >>> 8) & 0x0F];
-////                buf[j++] = HEX_DIGITS[(k >>> 4) & 0x0F];
-////                buf[j++] = HEX_DIGITS[ k        & 0x0F];
-////                buf[j++] = ' ';
-////            }
-////            return new String(buf);
-////        }
-////
-////        /**
-////         * utility method to convert a byte to a hexadecimal string.
-////         * <p>
-////         * the byte is converted to 2 hex symbols,
-////         * using the HEX_DIGITS array for the mapping.
-////         * @param b byte to be converted into hex
-////         * @return hex representation of byte
-////         */
-////        public static String toHEX1 (byte b) {
-////            char[] buf = new char[2];
-////            int j = 0;
-////            buf[j++] = HEX_DIGITS[(b >>> 4) & 0x0F];
-////            buf[j++] = HEX_DIGITS[ b        & 0x0F];
-////            return new String(buf);
-////        }
-////
-////        /**
-////         * utility method to convert a byte array to a hexadecimal string.
-////         * <p>
-////         * Each byte of the input array is converted to 2 hex symbols,
-////         * using the HEX_DIGITS array for the mapping.
-////         * @param ba array of bytes to be converted into hex
-////         * @return hex representation of byte array
-////         */
-////        public static String toHEX1 (byte[] ba) {
-////            int length = ba.length;
-////            char[] buf = new char[length * 2];
-////            for (int i = 0, j = 0, k; i < length; ) {
-////                k = ba[i++];
-////                buf[j++] = HEX_DIGITS[(k >>> 4) & 0x0F];
-////                buf[j++] = HEX_DIGITS[ k        & 0x0F];
-////            }
-////            return new String(buf);
-////        }
-////
-////        /**
-////         * utility method to convert a short array to a hexadecimal string.
-////         * <p>
-////         * Each word of the input array is converted to 4 hex symbols,
-////         * using the HEX_DIGITS array for the mapping.
-////         * @param ia array of shorts to be converted into hex
-////         * @return hex representation of short array
-////         */
-////        public static String toHEX1 (short[] ia) {
-////            int length = ia.length;
-////            char[] buf = new char[length * 4];
-////            for (int i = 0, j = 0, k; i < length; ) {
-////                k = ia[i++];
-////                buf[j++] = HEX_DIGITS[(k >>>12) & 0x0F];
-////                buf[j++] = HEX_DIGITS[(k >>> 8) & 0x0F];
-////                buf[j++] = HEX_DIGITS[(k >>> 4) & 0x0F];
-////                buf[j++] = HEX_DIGITS[ k        & 0x0F];
-////            }
-////            return new String(buf);
-////        }
-////
-////        /**
-////         * utility method to convert an int to a hexadecimal string.
-////         * <p>
-////         * the int is converted to 8 hex symbols,
-////         * using the HEX_DIGITS array for the mapping.
-////         * @param i int to be converted into hex
-////         * @return hex representation of int
-////         */
-////        public static String toHEX1 (int i) {
-////            char[] buf = new char[8];
-////            int j = 0;
-////            buf[j++] = HEX_DIGITS[(i >>>28) & 0x0F];
-////            buf[j++] = HEX_DIGITS[(i >>>24) & 0x0F];
-////            buf[j++] = HEX_DIGITS[(i >>>20) & 0x0F];
-////            buf[j++] = HEX_DIGITS[(i >>>16) & 0x0F];
-////            buf[j++] = HEX_DIGITS[(i >>>12) & 0x0F];
-////            buf[j++] = HEX_DIGITS[(i >>> 8) & 0x0F];
-////            buf[j++] = HEX_DIGITS[(i >>> 4) & 0x0F];
-////            buf[j++] = HEX_DIGITS[ i        & 0x0F];
-////            return new String(buf);
-////        }
-////
-////        /**
-////         * utility method to convert an int array to a hexadecimal string.
-////         * <p>
-////         * Each word of the input array is converted to 8 hex symbols,
-////         * using the HEX_DIGITS array for the mapping.
-////         * @param ia array of ints to be converted into hex
-////         * @return hex representation of int array
-////         */
-////        public static String toHEX1 (int[] ia) {
-////            int length = ia.length;
-////            char[] buf = new char[length * 8];
-////            for (int i = 0, j = 0, k; i < length; ) {
-////                k = ia[i++];
-////                buf[j++] = HEX_DIGITS[(k >>>28) & 0x0F];
-////                buf[j++] = HEX_DIGITS[(k >>>24) & 0x0F];
-////                buf[j++] = HEX_DIGITS[(k >>>20) & 0x0F];
-////                buf[j++] = HEX_DIGITS[(k >>>16) & 0x0F];
-////                buf[j++] = HEX_DIGITS[(k >>>12) & 0x0F];
-////                buf[j++] = HEX_DIGITS[(k >>> 8) & 0x0F];
-////                buf[j++] = HEX_DIGITS[(k >>> 4) & 0x0F];
-////                buf[j++] = HEX_DIGITS[ k        & 0x0F];
-////            }
-////            return new String(buf);
-////        }
-////
-////
-////        //......................................................................
-////        /**
-////         * Returns a byte array from a string of hexadecimal digits.
-////         *
-////         * @param hex string of hex characters
-////         * @return byte array of binary data corresponding to hex string input
-////         */
-////        public static byte[] hex2byte(String hex) {
-////            int len = hex.length();
-////            byte[] buf = new byte[((len + 1) / 2)];
-////
-////            int i = 0, j = 0;
-////            if ((len % 2) == 1)
-////                buf[j++] = (byte) hexDigit(hex.charAt(i++));
-////
-////            while (i < len) {
-////                buf[j++] = (byte) ((hexDigit(hex.charAt(i++)) << 4) |
-////                        hexDigit(hex.charAt(i++)));
-////            }
-////            return buf;
-////        }
-////
-////        //......................................................................
-////        /**
-////         * Returns true if the string consists ONLY of valid hex characters
-////         *
-////         * @param hex string of hex characters
-////         * @return true if a valid hex string
-////         */
-////        public static boolean isHex(String hex) {
-////            int len = hex.length();
-////            int i = 0;
-////            char ch;
-////
-////            while (i < len) {
-////                ch = hex.charAt(i++);
-////                if (! ((ch >= '0' && ch <= '9') || (ch >= 'A' && ch <= 'F') ||
-////                        (ch >= 'a' && ch <= 'f'))) return false;
-////            }
-////            return true;
-////        }
-////
-////        //......................................................................
-////        /**
-////         * Returns the number from 0 to 15 corresponding to the hex digit <i>ch</i>.
-////         *
-////         * @param ch hex digit character (must be 0-9A-Fa-f)
-////         * @return   numeric equivalent of hex digit (0-15)
-////         */
-////        public static int hexDigit(char ch) {
-////            if (ch >= '0' && ch <= '9')
-////                return ch - '0';
-////            if (ch >= 'A' && ch <= 'F')
-////                return ch - 'A' + 10;
-////            if (ch >= 'a' && ch <= 'f')
-////                return ch - 'a' + 10;
-////
-////            return(0);	// any other char is treated as 0
-////        }
-////
-////    }
-//}
+
+
+    public void setKey(byte[] key) {
+        final int BC = sizeblock / 4;
+        final int Klen = key.length;
+        final int Nk = Klen / 4;
+//        pakairounds = jmlRound(Klen);
+        int i, j, r;
+
+        // jumlah round berdasarkan panjang kunci
+
+
+        pakairounds = 14;
+
+        final int R_KEY = (pakairounds + 1) * BC;
+
+//        arraybytes kunciasli. setiap isi per huruf
+
+        byte[] w0 = new byte[R_KEY];
+        byte[] w1 = new byte[R_KEY];
+        byte[] w2 = new byte[R_KEY];
+        byte[] w3 = new byte[R_KEY];
+
+        // array utk kunci enkripsi dan dekrpsi
+        enkripsikunci = new byte[pakairounds + 1][sizeblock];
+        dekripkunci = new byte[pakairounds + 1][sizeblock];
+
+        // kunci ke array
+        for (i=0, j=0; i < Nk; i++) {
+            w0[i] = key[j++];
+            w1[i] = key[j++];
+            w2[i] = key[j++];
+            w3[i] = key[j++];
+        }
+
+        // key Expansion
+        byte t0, t1, t2, t3, old0;
+        for (i = Nk; i < R_KEY; i++) {
+            t0 = w0[i-1];
+            t1 = w1[i-1];
+            t2 = w2[i-1];
+            t3 = w3[i-1];    // temp = w[i-1]
+            if (i % Nk == 0) {
+                old0 = t0;            // t0 utk t3 Sbox
+                t0 = (byte)(Sbox[t1 & 0xFF] ^ rcon[(i/Nk)]);    //  XOR konstan byte awal
+                t1 = (byte)(Sbox[t2 & 0xFF]);
+                t2 = (byte)(Sbox[t3 & 0xFF]);    // RotWord dengan reorder bytes yg sudah dipakai
+                t3 = (byte)(Sbox[old0 & 0xFF]);
+            }
+            else if ((Nk > 6) && (i % Nk == 4)) {
+                // temp = SubWord(temp)
+                t0 = (byte) Sbox[t0 & 0xFF];
+                t1 = (byte) Sbox[t1 & 0xFF];
+                t2 = (byte) Sbox[t2 & 0xFF];
+                t3 = (byte) Sbox[t3 & 0xFF];
+            }
+            // w[i] = w[i-Nk] ^ temp
+            w0[i] = (byte)(w0[i-Nk] ^ t0);
+            w1[i] = (byte)(w1[i-Nk] ^ t1);
+            w2[i] = (byte)(w2[i-Nk] ^ t2);
+            w3[i] = (byte)(w3[i-Nk] ^ t3);
+        }
+
+        // hasil expansion dimasukkan ke kunci enkripsi/dekripsi
+        for (r = 0, i = 0; r < pakairounds + 1; r++) {    // utk round
+            for (j = 0; j < BC; j++) {        // utk tiap huruf pada round yang dibutukan
+                enkripsikunci[r][4*j] = w0[i];
+                enkripsikunci[r][4*j+1] = w1[i];
+                enkripsikunci[r][4*j+2] = w2[i];
+                enkripsikunci[r][4*j+3] = w3[i];
+                dekripkunci[pakairounds - r][4*j] = w0[i];
+                dekripkunci[pakairounds - r][4*j+1] = w1[i];
+                dekripkunci[pakairounds - r][4*j+2] = w2[i];
+                dekripkunci[pakairounds - r][4*j+3] = w3[i];
+                i++;
+            }
+        }
+
+    }
+
+
+
+
+
+    public static String ByteArraykeString(byte[] data) {
+        String hasil = "";
+        StringBuffer sb = new StringBuffer();
+        for(int i=0; i<data.length; i++) {
+            int n = (int) data[i];
+            if(n<0)
+                n += 256;
+            sb.append((char) n);
+        }
+        hasil = sb.toString();
+        return hasil;
+    }
+
+    public static byte[] StringkeByteArray(String s){
+        byte[] temp = new byte[s.length()];
+
+        for(int i=0;i<s.length();i++){
+            temp[i] = (byte) s.charAt(i);
+
+        }
+        return temp;
+
+
+    }
+
+
+    public String enkdek(String data, int mode)  {
+        aes aes = this;
+
+        if(data.length()/16 > ((int) data.length()/16)) {
+            int temps = data.length()-((int) data.length()/16)*16;
+            Log.d("TAG", "enkdek3s: "+temps);
+
+            for(int i=0; i<temps; i++)
+                data += " ";
+        }
+        Log.d("TAG", "enkdek: "+data.length()/16);
+        Log.d("TAG", "enkdekds: "+data.length());
+        Log.d("TAG", "enkdek2: "+((int) data.length()/16));
+        int pjgdata = (int) data.length()/16;
+        Log.d("TAG", "enkdek3: "+pjgdata);
+
+        byte[] hasil = new byte[data.length()];
+        String bagStr = "";
+        byte[] bagByt = new byte[16];
+        for(int p=0; p<pjgdata; p++) {
+            bagStr = data.substring(p*16, p*16+16);
+            bagByt = StringkeByteArray(bagStr);
+            if(mode==1) bagByt = aes.enkrpsi(bagByt);
+            if(mode==2) bagByt = aes.dekrpsi(bagByt);
+            for(int b=0; b<16; b++)
+                hasil[p*16+b] = bagByt[b];
+        }
+        return ByteArraykeString(hasil);
+    }
+
+    public String Encrypt(String data) {
+        Log.d("TAG", "Esasa: "+data.length());
+
+        while((data.length() % 32) != 0)
+            data += " ";
+        Log.d("TAG", "Esasad: "+data.length());
+
+        return enkdek(data, 1);
+    }
+    public String Decrypt(String data) {
+
+        return enkdek(data, 2).trim();
+    }
+
+
+}
+
+
+
+

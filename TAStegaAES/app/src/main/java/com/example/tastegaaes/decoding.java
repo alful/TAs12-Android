@@ -43,7 +43,7 @@ public class decoding extends AppCompatActivity implements View.OnClickListener 
 
     private static int RESULT_LOAD_IMG2 = 1;
     String status = "-";
-    int pixel = 100;
+    int pixel = 150;
     String hsls;
 
     String AES = "AES";
@@ -70,6 +70,9 @@ public class decoding extends AppCompatActivity implements View.OnClickListener 
         bDecodeProcess.setOnClickListener(this);
         Button bDecodeOnly= (Button)findViewById(R.id.DecodeSteganoOnly);
         bDecodeOnly.setOnClickListener(this);
+        Button Resett= (Button)findViewById(R.id.dreset);
+        Resett.setOnClickListener(this);
+
         dbHelper = new DataHelper(this);
 
 
@@ -94,11 +97,27 @@ public class decoding extends AppCompatActivity implements View.OnClickListener 
                 break;
             case R.id.DecodeProcess:
                 modsa=1;
+                EditText kuns = (EditText) findViewById(R.id.DecodeKey);
+                String kuncsas=kuns.getText().toString();
 
 
-                MyAsyncTasks myAsyncTasks = new MyAsyncTasks();
-                myAsyncTasks.execute();
+                if (((ImageView)findViewById(R.id.ivImageDecode)).getDrawable() == null) {
+                    Toast.makeText(getApplicationContext(), "Please attach an stegano image", Toast.LENGTH_LONG).show();
+                    status = "Please attach an stegano image";
+                    return;
+                }
+                if (kuncsas.matches(""))
+                {
+                    Toast.makeText(getApplicationContext(), "Please write a key", Toast.LENGTH_LONG).show();
+                    status = "Please write a key";
+                    return;
+                }
+                else {
 
+
+                    MyAsyncTasks myAsyncTasks = new MyAsyncTasks();
+                    myAsyncTasks.execute();
+                }
 //                try {
 //                    MyAsyncTasks myAsyncTasks = new MyAsyncTasks();
 //                    myAsyncTasks.execute();
@@ -118,6 +137,18 @@ public class decoding extends AppCompatActivity implements View.OnClickListener 
                 myAsyncTasksa.execute();
 
                 break;
+
+            case R.id.dreset:
+                EditText txtPesan = (EditText) findViewById(R.id.TextDecode);
+                EditText txtkey = (EditText) findViewById(R.id.DecodeKey);
+                ImageView localImageView = (ImageView) findViewById(R.id.ivImageDecode);
+
+                txtkey.getText().clear();
+                txtPesan.getText().clear();
+                localImageView.setImageDrawable(null);
+
+
+                break;
         }
 
     }
@@ -126,12 +157,13 @@ public class decoding extends AppCompatActivity implements View.OnClickListener 
         int a,b;
 
 //        Log.d("TAG", "extractMessage: "+bi.getHeight());
-        if (bi.getHeight()<pixel){a = bi.getHeight();}
-        else {a = pixel;}
-
-        if (bi.getWidth()<pixel){b = bi.getWidth();}
-        else {b = pixel;}
-
+//        if (bi.getHeight()<pixel){a = bi.getHeight();}
+//        else {a = pixel;}
+//
+//        if (bi.getWidth()<pixel){b = bi.getWidth();}
+//        else {b = pixel;}
+        a=bi.getHeight();
+        b=bi.getWidth();
         String extractedText = "";
         Module mod = new Module();
 //        Log.d("TAG", "extractMessagea: "+a);
@@ -161,14 +193,24 @@ public class decoding extends AppCompatActivity implements View.OnClickListener 
                 String b1 = Integer.toBinaryString(B1);
 //                Log.d("TAG", "extractMessageb1: "+b1);
 
+//                String rr = mod.binertoeightbiner(r1);
+//                String R = rr.substring(6, 8);
+//
+//                String gg = mod.binertoeightbiner(g1);
+//                String G = gg.substring(6, 8);
+//
+//                String bb = mod.binertoeightbiner(b1);
+//                String B = bb.substring(6, 8);
+
+
                 String rr = mod.binertoeightbiner(r1);
-                String R = rr.substring(6, 8);
+                String R = rr.substring(7, 8);
 
                 String gg = mod.binertoeightbiner(g1);
-                String G = gg.substring(6, 8);
+                String G = gg.substring(7, 8);
 
                 String bb = mod.binertoeightbiner(b1);
-                String B = bb.substring(6, 8);
+                String B = bb.substring(7, 8);
 //                Log.d("TAG", "extractMessageR: "+R);
 //                Log.d("TAG", "extractMessageG: "+G);
 //                Log.d("TAG", "extractMessageB: "+B);
@@ -176,6 +218,9 @@ public class decoding extends AppCompatActivity implements View.OnClickListener 
 //                Log.d("TAG", "i: : "+i);
 //                Log.d("TAG", "j: : "+j);
                 Log.d("TAG", "extractedText: : "+extractedText);
+                if (extractedText.contains("00000000000000")){
+                    break;
+                }
 
 
 
@@ -197,6 +242,8 @@ public class decoding extends AppCompatActivity implements View.OnClickListener 
             status = "Please attach an stegano image";
             return;
         }
+
+
 
         else {
 
@@ -342,7 +389,7 @@ public class decoding extends AppCompatActivity implements View.OnClickListener 
                 try {
                     MessageDigest digest = MessageDigest.getInstance(SHA);
 //                digest.update(kuncis.getBytes());
-                    data = AES.static_stringToByteArray(kuncis);
+                    data = AES.StringkeByteArray(kuncis);
                     digest.update(data, 0, data.length);
 //            Log.d("TAG", "hasil: "+AES.static_stringToByteArray(textkey));
 //            Log.d("TAG", "hasilupdat: "+dataBytes);
@@ -374,10 +421,11 @@ public class decoding extends AppCompatActivity implements View.OnClickListener 
                     e.printStackTrace();
                 }
             }
-            else
-                output=hslk;
+            else {
+                output = hslk;
+                pltext = output;
 
-
+            }
 //            MessageDigest baru = null;
 //            try {
 //
@@ -579,6 +627,8 @@ public class decoding extends AppCompatActivity implements View.OnClickListener 
             duration=endtime-starttume;
             akhir=(double) duration/1000000000;
             dbHelper.addDecodeAES(path,fname,pltext,kunci,chiper,akhir);
+            if (modsa==2)
+                dbHelper.addDecodeOnly(path,fname,pltext,akhir);
 
         }
 
