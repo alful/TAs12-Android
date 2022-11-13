@@ -31,14 +31,14 @@ public class Module {
         char[] numbers = biner.toCharArray();
         Integer hasil =0;
         int count = 0;
-        Log.d("TAG", "numbsr: "+numbers.length);
+//        Log.d("TAG", "numbsr: "+numbers.length);
 
         for (int i = numbers.length - 1; i >= 0; i--) {
-            Log.d("TAG", "not1w "+i+": "+numbers[i]);
+//            Log.d("TAG", "not1w "+i+": "+numbers[i]);
 
             if (numbers[i] == '1'){
                 hasil += (int) Math.pow(2, count);
-                Log.d("TAG", "binertointeger: "+hasil);
+//                Log.d("TAG", "binertointeger: "+hasil);
             }
             count++;
         }

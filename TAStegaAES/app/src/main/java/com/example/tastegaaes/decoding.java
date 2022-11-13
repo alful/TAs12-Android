@@ -218,7 +218,7 @@ public class decoding extends AppCompatActivity implements View.OnClickListener 
 //                Log.d("TAG", "i: : "+i);
 //                Log.d("TAG", "j: : "+j);
                 Log.d("TAG", "extractedText: : "+extractedText);
-                if (extractedText.contains("00000000000000")){
+                if (extractedText.contains("000000000000000000")){
                     break;
                 }
 
@@ -254,7 +254,9 @@ public class decoding extends AppCompatActivity implements View.OnClickListener 
             Bitmap bi2 = bi3.copy(Bitmap.Config.ARGB_8888,true);
             Module mod = new Module();
             String hasilExtract = extractMessage(bi2);
-            hasilExtract=hasilExtract.split("00000000000000")[0];
+            Log.d("TAG", "Decodeprocessinsdg: "+hasilExtract.length());
+
+            hasilExtract=hasilExtract.split("000000000000000000")[0];
             int lenghts=hasilExtract.length();
             if (lenghts%8!=0)
             {
@@ -332,7 +334,8 @@ public class decoding extends AppCompatActivity implements View.OnClickListener 
             String hslk=asb.toString();
 
             chiper=hslk;
-            Log.d("TAG", "chipers: : "+chiper);
+            Log.d("TAG", "chipers: : "+chiper.trim());
+            Log.d("TAG", "chiperss: : "+chiper.length());
 
 //                byte[] dataBytes = new byte[1024];
 //

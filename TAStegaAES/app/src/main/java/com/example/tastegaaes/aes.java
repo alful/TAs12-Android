@@ -214,108 +214,108 @@ public class aes {
     }
 
 
-//    public byte[] enkrpsi(byte[] teksasli) {
-//        byte [] a = new byte[sizeblock];
-//        byte [] tempa = new byte[sizeblock];
-//
-//        //teks asli dijadikan sebuah state dan XOR dengan ADDROUNDKEY // -> (byte) nanti jd hexa
-//        a=AddroundKey(teksasli,0,0);
-//
-//        // Looping untuk Round 1 - min terakhir karena round akhir tidak pakai mix
-//        for (int r = 1; r < pakairounds; r++) {
-//            //kunci yang dipakai
-//
-//            // SubBytes dengan S-Box  //masking
-//            tempa=SubBytes(a,r);
-//
-//            // ShiftRows
-//            a=ShiftRows(tempa,r);
-//
-//
-//            // MixColumns (state) ke ta
-//            tempa=MixColumn(a,r);
-//
-//            // AddRoundKey
-//            a=AddroundKey(tempa,r,0);
-//        }
-//
-//        // Round AKhir
-//        // SubBytes Akhr
-//        a=SubBytes(a,pakairounds);
-//
-//        // ShiftRowsAkhir
-//        tempa=ShiftRows(a,pakairounds);
-//
-//        // AddRoundKey
-//        a=AddroundKey(tempa,pakairounds,0);
-//        return (a);
-//    }
-
-
     public byte[] enkrpsi(byte[] teksasli) {
         byte [] a = new byte[sizeblock];
         byte [] tempa = new byte[sizeblock];
-        byte [] Ker;
-        int    i, k, row, col;
-
-
 
         //teks asli dijadikan sebuah state dan XOR dengan ADDROUNDKEY // -> (byte) nanti jd hexa
-        Ker = enkripsikunci[0];
-        for (i = 0; i < sizeblock; i++)
-            a[i] = (byte)(teksasli[i] ^ Ker[i]);
+        a=AddroundKey(teksasli,0,0);
 
         // Looping untuk Round 1 - min terakhir karena round akhir tidak pakai mix
         for (int r = 1; r < pakairounds; r++) {
             //kunci yang dipakai
-            Ker = enkripsikunci[r];
 
             // SubBytes dengan S-Box  //masking
-            for (i = 0; i < sizeblock; i++)
-                tempa[i] = (byte) Sbox[a[i] & 0xFF];
+            tempa=SubBytes(a,r);
 
             // ShiftRows
-            for (i = 0; i < sizeblock; i++) {
-                row = i % panjang;
-                k = (i + (geser_baris[row] * panjang)) % sizeblock;    // get shifted byte index
-                a[i] = tempa[k];
-//                Log.d("TAG", "enkrpsishift: "+a[i]);
+            a=ShiftRows(tempa,r);
 
-            }
 
             // MixColumns (state) ke ta
-            for (col = 0; col < kolom; col++) {
-                i = col * panjang;        // index col -> ngecasting hex ke desimal
-                tempa[i]   = (byte)(kali(0x02,a[i]) ^ kali(0x03,a[i+1]) ^ a[i+2] ^ a[i+3]);
-                tempa[i+1] = (byte)(a[i] ^ kali(0x02,a[i+1]) ^ kali(0x03,a[i+2]) ^ a[i+3]);
-                tempa[i+2] = (byte)(a[i] ^ a[i+1] ^ kali(0x02,a[i+2]) ^ kali(0x03,a[i+3]));
-                tempa[i+3] = (byte)(kali(0x03,a[i]) ^ a[i+1] ^ a[i+2] ^ kali(0x02,a[i+3]));
-            }
+            tempa=MixColumn(a,r);
 
             // AddRoundKey
-            for (i = 0; i < sizeblock; i++)
-                a[i] = (byte)(tempa[i] ^ Ker[i]);
+            a=AddroundKey(tempa,r,0);
         }
 
         // Round AKhir
-        Ker = enkripsikunci[pakairounds];
-
         // SubBytes Akhr
-        for (i = 0; i < sizeblock; i++)
-            a[i] = (byte) Sbox[a[i] & 0xFF];
+        a=SubBytes(a,pakairounds);
 
         // ShiftRowsAkhir
-        for (i = 0; i < sizeblock; i++) {
-            row = i % panjang;
-            k = (i + (geser_baris[row] * panjang)) % sizeblock;
-            tempa[i] = a[k];
-        }
+        tempa=ShiftRows(a,pakairounds);
 
         // AddRoundKey
-        for (i = 0; i < sizeblock; i++)
-            a[i] = (byte)(tempa[i] ^ Ker[i]);
+        a=AddroundKey(tempa,pakairounds,0);
         return (a);
     }
+
+
+//    public byte[] enkrpsi(byte[] teksasli) {
+//        byte [] a = new byte[sizeblock];
+//        byte [] tempa = new byte[sizeblock];
+//        byte [] Ker;
+//        int    i, k, row, col;
+//
+//
+//
+//        //teks asli dijadikan sebuah state dan XOR dengan ADDROUNDKEY // -> (byte) nanti jd hexa
+//        Ker = enkripsikunci[0];
+//        for (i = 0; i < sizeblock; i++)
+//            a[i] = (byte)(teksasli[i] ^ Ker[i]);
+//
+//        // Looping untuk Round 1 - min terakhir karena round akhir tidak pakai mix
+//        for (int r = 1; r < pakairounds; r++) {
+//            //kunci yang dipakai
+//            Ker = enkripsikunci[r];
+//
+//            // SubBytes dengan S-Box  //masking
+//            for (i = 0; i < sizeblock; i++)
+//                tempa[i] = (byte) Sbox[a[i] & 0xFF];
+//
+//            // ShiftRows
+//            for (i = 0; i < sizeblock; i++) {
+//                row = i % panjang;
+//                k = (i + (geser_baris[row] * panjang)) % sizeblock;    // get shifted byte index
+//                a[i] = tempa[k];
+////                Log.d("TAG", "enkrpsishift: "+a[i]);
+//
+//            }
+//
+//            // MixColumns (state) ke ta
+//            for (col = 0; col < kolom; col++) {
+//                i = col * panjang;        // index col -> ngecasting hex ke desimal
+//                tempa[i]   = (byte)(kali(0x02,a[i]) ^ kali(0x03,a[i+1]) ^ a[i+2] ^ a[i+3]);
+//                tempa[i+1] = (byte)(a[i] ^ kali(0x02,a[i+1]) ^ kali(0x03,a[i+2]) ^ a[i+3]);
+//                tempa[i+2] = (byte)(a[i] ^ a[i+1] ^ kali(0x02,a[i+2]) ^ kali(0x03,a[i+3]));
+//                tempa[i+3] = (byte)(kali(0x03,a[i]) ^ a[i+1] ^ a[i+2] ^ kali(0x02,a[i+3]));
+//            }
+//
+//            // AddRoundKey
+//            for (i = 0; i < sizeblock; i++)
+//                a[i] = (byte)(tempa[i] ^ Ker[i]);
+//        }
+//
+//        // Round AKhir
+//        Ker = enkripsikunci[pakairounds];
+//
+//        // SubBytes Akhr
+//        for (i = 0; i < sizeblock; i++)
+//            a[i] = (byte) Sbox[a[i] & 0xFF];
+//
+//        // ShiftRowsAkhir
+//        for (i = 0; i < sizeblock; i++) {
+//            row = i % panjang;
+//            k = (i + (geser_baris[row] * panjang)) % sizeblock;
+//            tempa[i] = a[k];
+//        }
+//
+//        // AddRoundKey
+//        for (i = 0; i < sizeblock; i++)
+//            a[i] = (byte)(tempa[i] ^ Ker[i]);
+//        return (a);
+//    }
 
 
 

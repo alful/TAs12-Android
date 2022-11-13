@@ -555,11 +555,14 @@ public class encoding extends AppCompatActivity implements View.OnClickListener 
         String hasil = mod.stringtobiner(output).concat("00000000000000000000"); // ubah pesan ke binary dan di tambahakn enol di belakgannya
 //        String absd= mod.stringtobiner(output);
         Log.d("TAG", "Encodeprocessing: "+hasil);
+        Log.d("TAG", "Encodeprocessing: "+output.length());
 //        Log.d("TAG", "Encodeprocessinasdg: "+absd);
         int pjg_hasil = output.length();
         int total_lsb = mod.sumlsb(Cover_Image);
 //        Log.d("TAG", "pjg hsl: "+pjg_hasil);
         Log.d("TAG", "totallsb: "+total_lsb);
+        Log.d("TAG", "totallsbsd: "+hasil.length());
+
         Log.d("TAG", "totallsb: "+Cover_Image.getHeight()+" : "+Cover_Image.getWidth());
 
 
@@ -702,7 +705,7 @@ public class encoding extends AppCompatActivity implements View.OnClickListener 
                 //red
                 if (charIndex < pjgpesan) {
                     String PesanR = pesan.substring(charIndex, charIndex + 1); // index 0, 1 alias indeks ke - 0;
-                    Log.d("TAG", "insertMessagePesanR: "+PesanR);
+//                    Log.d("TAG", "insertMessagePesanR: "+PesanR);
                     if ( Integer.valueOf(PesanR) == 1) {
                         r3 = r2.concat("1"); //mengganti bit belakang menjadi 1
                     }
@@ -735,7 +738,7 @@ public class encoding extends AppCompatActivity implements View.OnClickListener 
                 //green
                 if (charIndex<pjgpesan) {
                     String PesanG = pesan.substring(charIndex, charIndex + 1); // lnjut dari index atasnya
-                    Log.d("TAG", "insertMessagePesanG: "+PesanG);
+//                    Log.d("TAG", "insertMessagePesanG: "+PesanG);
                     if ( Integer.valueOf(PesanG) == 1) {
                         g3 = g2.concat("1");
                     }
@@ -770,7 +773,7 @@ public class encoding extends AppCompatActivity implements View.OnClickListener 
                 //blue
                 if (charIndex<pjgpesan){
                     String PesanB = pesan.substring(charIndex, charIndex + 1); // lanjut dari index atasnya
-                    Log.d("TAG", "insertMessagePesanB: "+PesanB);
+//                    Log.d("TAG", "insertMessagePesanB: "+PesanB);
                     if ( Integer.valueOf(PesanB) == 1) {
                         b3 = b2.concat("1");
                     }
@@ -811,6 +814,7 @@ public class encoding extends AppCompatActivity implements View.OnClickListener 
 
             }
         }
+        Log.d("TAG", "masukkanPesan: "+charIndex);
         return bit1;
     }
 
