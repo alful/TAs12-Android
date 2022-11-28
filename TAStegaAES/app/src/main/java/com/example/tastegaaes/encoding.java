@@ -1,53 +1,63 @@
 package com.example.tastegaaes;
 
+import android.Manifest;
 import android.app.AlertDialog;
 import android.app.ProgressDialog;
+import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.database.Cursor;
-import android.database.sqlite.SQLiteDatabase;
+//import android.database.sqlite.SQLiteDatabase;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.drawable.BitmapDrawable;
 import android.net.Uri;
+import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Environment;
 import android.provider.MediaStore;
 import android.provider.OpenableColumns;
 import android.support.annotation.Nullable;
 import android.support.annotation.RequiresApi;
+import android.support.v4.app.ActivityCompat;
+import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
-import android.view.ViewGroup;
+//import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageView;
-import android.widget.TextView;
+//import android.widget.TextView;
 import android.widget.Toast;
 
-import java.io.ByteArrayInputStream;
+//import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
-import java.io.FileNotFoundException;
+//import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.util.Arrays;
-import java.util.Base64;
+//import java.util.Arrays;
+//import java.util.Base64;
 import java.util.Random;
-import java.util.Scanner;
-
-import javax.crypto.Cipher;
-import javax.crypto.SecretKey;
-import javax.crypto.spec.SecretKeySpec;
 
 import id.zelory.compressor.Compressor;
+//import java.util.Scanner;
+
+//import javax.crypto.Cipher;
+//import javax.crypto.SecretKey;
+//import javax.crypto.spec.SecretKeySpec;
+
+//import id.zelory.compressor.Compressor;
 
 public class encoding extends AppCompatActivity implements View.OnClickListener {
 
@@ -73,7 +83,10 @@ public class encoding extends AppCompatActivity implements View.OnClickListener 
     Double akhir,psnrs;
     String path="",chiper="",kunci="",pltext="";
     String SHA="SHA-256";
-
+    StringBuilder atas;
+    int tinggi=0,lebar=0,tinggias=0,lebaras=0;
+    long lengthbmp=0,lengthasli=0;
+    ProgressDialog progressDialog;
 
 
     @Override
@@ -112,25 +125,75 @@ public class encoding extends AppCompatActivity implements View.OnClickListener 
                 break;
 
             case R.id.EncodeProc: //di klik menuju encode proses
-                try {
-                    mods=1;
-                    starttume=0;
-                    endtime=0;
-                    duration=0;
-                    akhir=null;
-                    psnrs=null;
-                    chiper="";
-                    kunci="";
-                    path="";
-                    pltext="";
-                    fname="";
-                    starttume=System.nanoTime();
+//                try {
+//                    mods=1;
+////                    starttume=0;
+////                    endtime=0;
+////                    duration=0;
+//                    akhir=null;
+//                    psnrs=null;
+//                    chiper="";
+//                    kunci="";
+//                    path="";
+//                    pltext="";
+//                    fname="";
+//                    starttume=System.nanoTime();
 
-                    Encodeprocessing(mods);
-                    endtime=System.nanoTime();
-                    duration=endtime-starttume;
-                    akhir=(double) duration/1000000000;
-                    dbHelper.addEncodeAES(path,fname,pltext,kunci,chiper,psnrs,akhir);
+//                    Encodeprocessing(mods);
+//                    endtime=System.nanoTime();
+//                    duration=endtime-starttume;
+//                    akhir=(double) duration/1000000000;
+//                    exporttxt(encoding.this,"/"+" "+fname+".txt",atas);
+                EditText kuns = (EditText) findViewById(R.id.EncodeKey);
+                String kuncsas=kuns.getText().toString();
+                EditText pesn = (EditText) findViewById(R.id.TextEncode);
+                String psna=kuns.getText().toString();
+
+
+                if (psna.replaceAll(" ", "") == "") {
+                    Toast.makeText(getApplicationContext(), "Please write a message", Toast.LENGTH_LONG).show();
+                    status = "Please write a message";
+                    //text cuma spasi
+                    return;
+                }
+
+                if (psna.matches("")) {
+                    Toast.makeText(getApplicationContext(), "Please write a message", Toast.LENGTH_LONG).show();
+                    status = "Please write a message";
+                    return;
+                }
+                if (kuncsas.matches("")) {
+                    Toast.makeText(getApplicationContext(), "Please write a key", Toast.LENGTH_LONG).show();
+                    status = "Please write a key";
+                    return;
+                }
+                if (kuncsas.replaceAll(" ", "") == "") {
+                    Toast.makeText(getApplicationContext(), "Please write a message", Toast.LENGTH_LONG).show();
+                    status = "Please write a message";
+                    //text cuma spasi
+                    return;
+                }
+                if (kuncsas.length()<3){
+                    Toast.makeText(getApplicationContext(), "Please write a 3 word key", Toast.LENGTH_LONG).show();
+                    status = "Please write 3 word key";
+                    //text cuma spasi
+                    return;
+                }
+
+
+                else {
+                    MyAsyncTasks myAsyncTasks = new MyAsyncTasks();
+                    myAsyncTasks.execute();
+                }
+
+                int k=100;
+                Random gener = new Random();
+
+                k = gener.nextInt(k);
+                String namatxts="Data En= "+k;
+
+
+//                    dbHelper.addEncodeAES(path,fname,pltext,kunci,chiper,psnrs,akhir);
 
 //                    dbHelper.addEncodeAES(path,fname,waktu);
 
@@ -141,35 +204,38 @@ public class encoding extends AppCompatActivity implements View.OnClickListener 
 //                       //     text3.getText().toString() + "','" +
 //                         //   text4.getText().toString() + "','" +
 //                           // text5.getText().toString() + "')");
-                } catch (NoSuchAlgorithmException | UnsupportedEncodingException e) {
-                    e.printStackTrace();
-                }
+//                } catch (NoSuchAlgorithmException | UnsupportedEncodingException e) {
+//                    e.printStackTrace();
+//                }
 
                 break;
             case R.id.EncodeOnly: //di klik menuju encode proses
-                mods=2;
-                try {
-                    starttume=0;
-                    endtime=0;
-                    duration=0;
-                    akhir=null;
-                    psnrs=null;
-                    kunci="";
-                    path="";
-                    pltext="";
-                    fname="";
-                    starttume=System.nanoTime();
-                    Encodeprocessing(mods);
-                    endtime=System.nanoTime();
-                    duration=endtime-starttume;
-                    akhir=(double) duration/1000000000;
-                    dbHelper.addEncodeOnly(path,fname,pltext,psnrs,akhir);
-
-                } catch (NoSuchAlgorithmException e) {
-                    e.printStackTrace();
-                } catch (UnsupportedEncodingException e) {
-                    e.printStackTrace();
-                }
+//                mods=2;
+//                try {
+////                    starttume=0;
+////                    endtime=0;
+////                    duration=0;
+//                    akhir=null;
+//                    psnrs=null;
+//                    kunci="";
+//                    path="";
+//                    pltext="";
+//                    fname="";
+//
+////                    decoding.MyAsyncTasks myAsyncTasksa = new decoding.MyAsyncTasks();
+////                    myAsyncTasksa.execute();
+////                    starttume=System.nanoTime();
+//                    Encodeprocessing(mods);
+////                    endtime=System.nanoTime();
+////                    duration=endtime-starttume;
+////                    akhir=(double) duration/1000000000;
+////                    dbHelper.addEncodeOnly(path,fname,pltext,psnrs,akhir);
+//
+//                } catch (NoSuchAlgorithmException e) {
+//                    e.printStackTrace();
+//                } catch (UnsupportedEncodingException e) {
+//                    e.printStackTrace();
+//                }
 //                Encodeonly();
 
 
@@ -285,7 +351,12 @@ public class encoding extends AppCompatActivity implements View.OnClickListener 
         int id = item.getItemId();
         AlertDialog dialog = new AlertDialog.Builder(encoding.this)
                 .setTitle("Hasil Encoding")
-                .setMessage("\n Status \t : " + status + " \n MSE \t :  "+ d +" \n PSNR \t :  "+ psn_r +"\n\n Stegano Image Name : \n"+fname+"\n")
+                .setMessage("\n Status \t : " + status + " \n MSE \t :  "
+                        + d +" \n PSNR \t :  "+ psn_r +"\n\n Stegano Image Name : \n"
+                        +fname+"\n"+"\n Dimensi Asli \t : "+tinggias+" x "+lebaras+" \n"
+                        +"\n Dimensi Stego \t : "+tinggi+" x "+lebar+" \n"
+                        +"\n Besar File Asli \t : "+lengthasli+" byte \n"
+                        +"\n Besar File Stego \t : "+lengthbmp+" byte \n")
                 .setPositiveButton("OK", new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface dialog, int which) {
@@ -359,87 +430,258 @@ public class encoding extends AppCompatActivity implements View.OnClickListener 
         EditText txtPesan = (EditText) findViewById(R.id.TextEncode);
         EditText txtkey = (EditText) findViewById(R.id.EncodeKey);
         String keys=txtkey.getText().toString();
-        Log.d("TAG", "KEysada: "+keys);
-            aes AES= new aes();
+        aes AES= new aes();
 
         String pesan = txtPesan.getText().toString();
         pltext = pesan;
 
         byte[] dataBytes = new byte[1024];
 
-        if (pesan.replaceAll(" ", "") == "") {
-            Toast.makeText(getApplicationContext(), "Please write a message", Toast.LENGTH_LONG).show();
-            status = "Please write a message";
-            //text cuma spasi
-            return;
-        }
+//        if (pesan.replaceAll(" ", "") == "") {
+//            Toast.makeText(getApplicationContext(), "Please write a message", Toast.LENGTH_LONG).show();
+//            status = "Please write a message";
+//            //text cuma spasi
+//            return;
+//        }
+//
+//        if (pesan.matches("")) {
+//            Toast.makeText(getApplicationContext(), "Please write a message", Toast.LENGTH_LONG).show();
+//            status = "Please write a message";
+//            return;
+//        }
+//        if (keys.matches("")) {
+//            Toast.makeText(getApplicationContext(), "Please write a key", Toast.LENGTH_LONG).show();
+//            status = "Please write a key";
+//            return;
+//        }
+//        if (keys.replaceAll(" ", "") == "") {
+//            Toast.makeText(getApplicationContext(), "Please write a message", Toast.LENGTH_LONG).show();
+//            status = "Please write a message";
+//            //text cuma spasi
+//            return;
+//        }
 
-        if (pesan.matches("")) {
-            Toast.makeText(getApplicationContext(), "Please write a message", Toast.LENGTH_LONG).show();
-            status = "Please write a message";
-            return;
-        }
-        if (keys.matches("")) {
-            Toast.makeText(getApplicationContext(), "Please write a key", Toast.LENGTH_LONG).show();
-            status = "Please write a key";
-            return;
-        }
-        if (keys.replaceAll(" ", "") == "") {
-            Toast.makeText(getApplicationContext(), "Please write a message", Toast.LENGTH_LONG).show();
-            status = "Please write a message";
-            //text cuma spasi
-            return;
-        }
-
+        atas=new StringBuilder();
 
         if (mods!=2) {
 
 
             try {
                 MessageDigest digest = MessageDigest.getInstance(SHA);
-//            digest.update(keys.getBytes());// baris 330 -331 sama artinya dengan baris ini
-                dataBytes = AES.StringkeByteArray(keys);
-                digest.update(dataBytes, 0, dataBytes.length);
+                digest.update(keys.getBytes());
+                // baris 330 -331 sama artinya dengan baris ini
+//                dataBytes = AES.StringkeByteArray(keys);
+//                digest.update(dataBytes, 0, dataBytes.length);
 //            Log.d("TAG", "hasil: "+AES.static_stringToByteArray(textkey));
 //            Log.d("TAG", "hasilupdat: "+dataBytes);
 //            Log.d("TAG", "hasilmd: "+digest.digest());
 
                 byte[] mdbytes = digest.digest();
+                Log.d("TAG", "Key Asli    : "+keys);
+                Log.d("TAG", "Cek SHA Hex : "+Util.ByteArrkeHex(mdbytes));
+                Log.d("TAG", "Cek SHA Word: "+Util.ByteArraykeString(mdbytes));
+
+
                 AES.setKey(mdbytes);
 
-                StringBuilder hextoString = new StringBuilder();
+//                StringBuilder hextoString = new StringBuilder();
 
-                for (byte msgDigest : mdbytes) {
-                    String h = Integer.toHexString(0xFF & msgDigest);
-                    while (h.length() < 2)
-                        h = "0" + h;
-                    hextoString.append(h);
-                }
-                System.out.println("sdad" + hextoString.toString());
+//                for (byte msgDigest : mdbytes) {
+//                    String h = Integer.toHexString(0xFF & msgDigest);
+//                    while (h.length() < 2)
+//                        h = "0" + h;
+//                    hextoString.append(h);
+//                }
+//                System.out.println("sdad" + hextoString.toString());
 
 
                 //key hashing
-                String res = "";
-                StringBuffer sb = new StringBuffer();
-                for(int i=0; i<mdbytes.length; i++) {
+//                String res = "";
+//                StringBuffer sb = new StringBuffer();
+//                for(int i=0; i<mdbytes.length; i++) {
+//
+//                    int n = (int) mdbytes[i];
+//
+//                    if(n<0) n += 256;
+//                    sb.append((char) n);
+//                }
+//                res = sb.toString();
+//                System.out.println("hasiasdasdl: "+res);
 
-                    int n = (int) mdbytes[i];
+//                Log.d("TAG", "hasilas: " + mdbytes);
+//                Log.d("TAG", "hasilas: " + mdbytes.length);
 
-                    if(n<0) n += 256;
-                    sb.append((char) n);
-                }
-                res = sb.toString();
-                System.out.println("hasiasdasdl: "+res);
+                while((pesan.length() % 16) != 0)
+                    pesan += " ";
 
-                Log.d("TAG", "hasilas: " + mdbytes);
-                Log.d("TAG", "hasilas: " + mdbytes.length);
+
                 output = AES.Encrypt(pesan);
-                kunci = hextoString.toString();
+//                kunci = hextoString.toString();
 
-                chiper = output;
+//                chiper = output;
 
                 Log.d("TAG", "startEncruptd: " + output);
 
+
+                double ava=0;
+                int ham=0;
+
+
+
+                atas.append("Key SHA: ").append(Util.ByteArraykeString(mdbytes)).append(System.lineSeparator());
+                atas.append("Key Text : ").append(keys).append(System.lineSeparator());
+                atas.append("Key SHA Text : ").append(Util.byteArrtoString(mdbytes)).append(System.lineSeparator());
+                atas.append("Plain Asli : ").append(pesan).append(System.lineSeparator());
+                atas.append("Plain Asli biner : ").append(Util.prettyBinary(Util.convertStringToBinary(pesan),8," ")).append(System.lineSeparator());
+                atas.append("Key Asli biner : ").append(Util.convertStringToBinary(keys)).append(System.lineSeparator());
+                atas.append("Chiper Text : ").append(output).append(System.lineSeparator()).append(System.lineSeparator());
+
+
+
+
+                byte[] textplains=Util.StringkeByteArray(pesan);
+//                System.out.println("hasilnya byte = "+Util.toHEX1(textplains));
+
+                byte[] keysa=Util.StringkeByteArray(keys);
+                byte[] outbyte=Util.StringkeByteArray(output);
+
+
+
+                for (int i=0;i<21;i++)
+                {
+                    byte[] flipplain=Util.flipBit(textplains,i);
+//                byte[] flipkey=Util.flipBit(keysa,i);
+                    byte[] dataBytes1;
+
+                    aes aesss=new aes();
+                    String teks=Util.byteArrtoString(flipplain);
+//                String keyi=Util.byteArrtoString(flipkey);
+//
+//                MessageDigest messageDigest=MessageDigest.getInstance(SHA);
+//                dataBytes1=aesss.StringkeByteArray(keyi);
+//                System.out.println("textkey = "+Util.toHEX1(a.StringkeByteArray(keyi)));
+//                messageDigest.update(dataBytes1, 0, dataBytes1.length);
+//                byte[] digestm = messageDigest.digest();
+
+                    String shakeys=Util.ByteArraykeString(mdbytes);
+
+
+                    atas.append("Plain Flip Ke-"+(i)+" : ").append(Util.prettyBinary(Util.convertStringToBinary(teks),8," ")).append(System.lineSeparator());
+                    atas.append("SHA Ke-"+(i)+" : ").append(Util.prettyBinary(Util.convertStringToBinary(shakeys),8," ")).append(System.lineSeparator());
+
+                    atas.append("Key Flip Ke-"+(i)+" : ").append(Util.convertStringToBinary(keys)).append(System.lineSeparator());
+
+                    aesss.setKey(mdbytes);
+                    String hasilflip=aesss.Encrypt(teks);
+                    byte[] hslflip=Util.StringkeByteArray(hasilflip);
+
+                    int bitdif=Util.bedabit(outbyte,hslflip);
+                    double avalaneffect;
+                    int totalbit=hasilflip.length()*8;
+                    avalaneffect= ((double)bitdif/(double)totalbit)*(double)100;
+                    Log.d("TAG", "bitdiffer: "+bitdif);
+
+                    Log.d("TAG", "avaeffec ke-"+i+" : "+avalaneffect);
+                    Log.d("TAG", "shakeys: "+shakeys);
+
+                    atas.append("Beda Bit Flip Ke-"+(i)+" : ").append(bitdif).append(System.lineSeparator());
+                    atas.append("Avalanche Effect Flip-Plain Ke-"+(i)+" : ").append(avalaneffect).append(System.lineSeparator()).append(System.lineSeparator());
+
+
+                    byte[] flipkey=Util.flipBit(keysa,i);
+
+//                String teks=Util.byteArrtoString(flipplain);
+                    String keyi=Util.byteArrtoString(flipkey);
+//
+
+                    atas.append("Plain Flip Ke-"+(i)+" : ").append(Util.prettyBinary(Util.convertStringToBinary(pesan),8," ")).append(System.lineSeparator());
+                    atas.append("Key Flip Ke-"+(i)+" : ").append(Util.prettyBinary(Util.convertStringToBinary(keyi),8," ")).append(System.lineSeparator());
+                    atas.append("Cek Key-Flip Ke-"+(i)+" : ").append(keyi).append(System.lineSeparator());
+
+                    MessageDigest messageDigest=MessageDigest.getInstance(SHA);
+                    dataBytes1=keyi.getBytes();
+//                dataBytes1=aesss.StringkeByteArray(keyi);
+//                    System.out.println("textkey = "+Util.toHEX1(a.StringkeByteArray(keyi)));
+//                    System.out.println("textkey1 = "+Util.toHEX1(keyi.getBytes()));
+                    messageDigest.update(dataBytes1, 0, dataBytes1.length);
+                    byte[] digestm = messageDigest.digest();
+
+                    aesss.setKey(digestm);
+                    hasilflip=aesss.Encrypt(pesan);
+                    hslflip=Util.StringkeByteArray(hasilflip);
+
+                    bitdif=Util.bedabit(outbyte,hslflip);
+
+                    totalbit=hasilflip.length()*8;
+                    avalaneffect= ((double)bitdif/(double)totalbit)*(double)100;
+                    Log.d("TAG", "avaeffec: "+bitdif);
+
+                    Log.d("TAG", "avaeffec: "+bitdif/(totalbit));
+                    Log.d("TAG", "avaeffec: "+avalaneffect);
+
+                    atas.append("Beda Bit Flip-KEY Ke-"+(i)+" : ").append(bitdif).append(System.lineSeparator());
+                    atas.append("Avalanche Effect Flip-KEY Ke-"+(i)+" : ").append(avalaneffect).append(System.lineSeparator()).append(System.lineSeparator());
+
+
+                    byte[] flipsha=Util.flipBit(mdbytes,i);
+                    aesss.setKey(flipsha);
+                    hasilflip=aesss.Encrypt(pesan);
+                    hslflip=Util.StringkeByteArray(hasilflip);
+                    bitdif=Util.bedabit(outbyte,hslflip);
+                    String keysha=Util.byteArrtoString(flipsha);
+
+                    totalbit=hasilflip.length()*8;
+                    avalaneffect= ((double)bitdif/(double)totalbit)*(double)100;
+                    Log.d("TAG", "avaeffec: "+bitdif);
+
+                    Log.d("TAG", "avaeffec: "+bitdif/(totalbit));
+                    Log.d("TAG", "avaeffec: "+avalaneffect);
+                    atas.append("Plain Flip Ke-"+(i)+" : ").append(Util.prettyBinary(Util.convertStringToBinary(pesan),8," ")).append(System.lineSeparator());
+                    atas.append("SHA Flip Ke-"+(i)+" : ").append(Util.prettyBinary(Util.convertStringToBinary(keysha),8," ")).append(System.lineSeparator());
+                    atas.append("Cek SHA-Flip Ke-"+(i)+" : ").append(keysha).append(System.lineSeparator());
+
+                    atas.append("Beda Bit Flip-SHA Ke-"+(i)+" : ").append(bitdif).append(System.lineSeparator());
+                    atas.append("Avalanche Effect Flip-SHA Ke-"+(i)+" : ").append(avalaneffect).append(System.lineSeparator()).append(System.lineSeparator());
+
+
+
+//                String teks=Util.byteArrtoString(flipplain);
+
+
+
+                    StringBuilder heks=new StringBuilder();
+                    for (byte msda :digestm)
+                    {
+                        String h=Integer.toHexString(0xFF & msda);
+
+                        while (h.length()<2)
+                            h="0" +h;
+//                Log.d("TAG", "hsa "+as++ +": "+h);
+
+                        heks.append(h);
+                    }
+                    System.out.println("hexsha  "+heks.toString());
+
+                    //filpbit
+                    //plain flip
+                    //key flip
+                    //sha flip
+
+
+                    //hamming/beda bit diambil
+                    //avalnche effect diambil
+                    //simpan avalanc dan hammning dengan buat java class baru
+                    //simpan plain,key,sha sebelum dan sesudah flip ke class baru
+                    //buat export
+                }
+
+
+//                System.out.println("hasil semuanya  "+atas);
+                String namatxs="";
+                int xz=1000;
+                Random geners=new Random();
+                xz=geners.nextInt(xz);
+                namatxs="Encrypt Data-"+xz;
 
             } catch (NoSuchAlgorithmException e) {
                 e.printStackTrace();
@@ -542,6 +784,7 @@ public class encoding extends AppCompatActivity implements View.OnClickListener 
 
         try {
             compressImage=new Compressor(encoding.this).setDestinationDirectoryPath(pathsd).setQuality(90).setCompressFormat(Bitmap.CompressFormat.PNG).compressToFile(original);
+
             File Final=new File(pathsd,original.getName());
             Bitmap hasli=BitmapFactory.decodeFile(Final.getAbsolutePath());
             imageAsli.setImageBitmap(hasli);
@@ -550,6 +793,12 @@ public class encoding extends AppCompatActivity implements View.OnClickListener 
         }
         bitmapAsli = ((BitmapDrawable) imageAsli.getDrawable()).getBitmap();
         Bitmap Cover_Image = bitmapAsli.copy(Bitmap.Config.ARGB_8888,true);
+
+        Bitmap bitmap = bitmapAsli;
+        ByteArrayOutputStream stream = new ByteArrayOutputStream();
+        bitmap.compress(Bitmap.CompressFormat.PNG, 100, stream);
+        byte[] imageInByte = stream.toByteArray();
+        lengthasli = imageInByte.length;
 
         Module mod = new Module();
         String hasil = mod.stringtobiner(output).concat("00000000000000000000"); // ubah pesan ke binary dan di tambahakn enol di belakgannya
@@ -586,9 +835,19 @@ public class encoding extends AppCompatActivity implements View.OnClickListener 
             d = mod.hitungMSE(Cover_Image, Stego_Image); //menghitung PSNR
             psn_r=mod.hitungPSNR(d);
             psnrs=psn_r;
-            Toast.makeText(getApplicationContext(), "Image Save :  " + fname+" PSNR : " +psn_r, Toast.LENGTH_LONG).show();
-            //startActivity(new Intent(this, MainActivity.class));
-            status = "encoding berhasil";
+            exporttxt(getApplicationContext(),"/"+" "+fname+".txt",atas);
+            lebaras=bitmapAsli.getWidth();
+            tinggias=bitmapAsli.getHeight();
+
+            runOnUiThread(new Runnable() {
+                public void run() {
+                    // runs on UI thread
+                    Toast.makeText(getApplicationContext(), "Image Saved :  "+fname+" PSNR : "+psn_r, Toast.LENGTH_LONG).show();
+                    //startActivity(new Intent(this, MainActivity.class));
+                    status = "encoding berhasil";
+
+                }
+            });
 
         }
 
@@ -628,14 +887,20 @@ public class encoding extends AppCompatActivity implements View.OnClickListener 
 
         localFile1.mkdirs();
         String ph=localFile1.getPath();
+        String fname2;
         path=ph;
         Log.d("TAG", "SaveImage: "+ph);
         Random generator = new Random();
         int n = 1000;
         n = generator.nextInt(n);
-        fname = "Data-" + n + ".jpg";
-        File localFile2 = new File(localFile1, fname);
+        fname = "Data-" + n;
+        fname2 =fname + ".jpg";
+        File localFile2 = new File(localFile1, fname2);
         scanMedia(localFile2);
+
+
+
+
 
         if (localFile2.exists()) {
             localFile2.delete();
@@ -644,7 +909,22 @@ public class encoding extends AppCompatActivity implements View.OnClickListener 
         try {
             FileOutputStream out = new FileOutputStream(localFile2);
 
-            paramBitmap.compress(Bitmap.CompressFormat.PNG, 90, out);
+
+            paramBitmap.compress(Bitmap.CompressFormat.PNG, 85, out);
+            lebar=paramBitmap.getWidth();
+            tinggi=paramBitmap.getHeight();
+
+            int besar=paramBitmap.getByteCount();
+
+
+            Bitmap bitmap = paramBitmap;
+            ByteArrayOutputStream stream = new ByteArrayOutputStream();
+            bitmap.compress(Bitmap.CompressFormat.PNG, 100, stream);
+            byte[] imageInByte = stream.toByteArray();
+            lengthbmp = imageInByte.length;
+
+            Log.d("TAG", "SaveImage: "+lengthbmp);
+
 //            Log.e("Dimensions", paramBitmap.getWidth()+" "+paramBitmap.getHeight());
 //            Log.e("Dimensions", paramBitmap.getDensity()+" "+paramBitmap.getByteCount());
 
@@ -658,10 +938,34 @@ public class encoding extends AppCompatActivity implements View.OnClickListener 
     private Bitmap masukkanPesan(String pesan) {
 
         //simpan pesan ke pixel lsb
-        ImageView ivLoadImg = (ImageView) findViewById(R.id.ivImageEncode);
+        ImageView ivLoadImg = findViewById(R.id.ivImageEncode);
         Bitmap bit2 = ((BitmapDrawable)ivLoadImg.getDrawable()).getBitmap();
-        //mengcopy bitmap dengan spesifikasi setiap pixel disimpan dalam 4 bytes
+        Bitmap bitmap = bit2;
+        ByteArrayOutputStream stream = new ByteArrayOutputStream();
+        bitmap.compress(Bitmap.CompressFormat.PNG, 100, stream);
+        byte[] imageInByte = stream.toByteArray();
+        lengthasli = imageInByte.length;
+
+        try {
+            compressImage=new Compressor(encoding.this).setDestinationDirectoryPath(pathsd).setQuality(90).setCompressFormat(Bitmap.CompressFormat.PNG).compressToFile(original);
+
+            File Final=new File(pathsd,original.getName());
+            Bitmap hasli=BitmapFactory.decodeFile(Final.getAbsolutePath());
+            ivLoadImg.setImageBitmap(hasli);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        bit2 = ((BitmapDrawable) ivLoadImg.getDrawable()).getBitmap();
+        ByteArrayOutputStream streams = new ByteArrayOutputStream();
+        bitmap.compress(Bitmap.CompressFormat.JPEG, 90, streams);
+
         Bitmap bit1 = bit2.copy(Bitmap.Config.ARGB_8888,true);
+
+
+//
+//        Bitmap bit2 = ((BitmapDrawable)ivLoadImg.getDrawable()).getBitmap();
+//        //mengcopy bitmap dengan spesifikasi setiap pixel disimpan dalam 4 bytes
+//        Bitmap bit1 = bit2.copy(Bitmap.Config.ARGB_8888,true);
 
 
         int a,b;
@@ -706,7 +1010,7 @@ public class encoding extends AppCompatActivity implements View.OnClickListener 
                 if (charIndex < pjgpesan) {
                     String PesanR = pesan.substring(charIndex, charIndex + 1); // index 0, 1 alias indeks ke - 0;
 //                    Log.d("TAG", "insertMessagePesanR: "+PesanR);
-                    if ( Integer.valueOf(PesanR) == 1) {
+                    if(Integer.valueOf(PesanR) ==1){
                         r3 = r2.concat("1"); //mengganti bit belakang menjadi 1
                     }
                     else{
@@ -739,7 +1043,7 @@ public class encoding extends AppCompatActivity implements View.OnClickListener 
                 if (charIndex<pjgpesan) {
                     String PesanG = pesan.substring(charIndex, charIndex + 1); // lnjut dari index atasnya
 //                    Log.d("TAG", "insertMessagePesanG: "+PesanG);
-                    if ( Integer.valueOf(PesanG) == 1) {
+                    if (Integer.valueOf(PesanG) == 1) {
                         g3 = g2.concat("1");
                     }
                     else{
@@ -774,7 +1078,7 @@ public class encoding extends AppCompatActivity implements View.OnClickListener 
                 if (charIndex<pjgpesan){
                     String PesanB = pesan.substring(charIndex, charIndex + 1); // lanjut dari index atasnya
 //                    Log.d("TAG", "insertMessagePesanB: "+PesanB);
-                    if ( Integer.valueOf(PesanB) == 1) {
+                    if (Integer.valueOf(PesanB) == 1) {
                         b3 = b2.concat("1");
                     }
                     else{
@@ -840,6 +1144,111 @@ public class encoding extends AppCompatActivity implements View.OnClickListener 
 //        SecretKeySpec secretKeySpec = new SecretKeySpec(key, "AES");
 //        return  secretKeySpec;
 //    }
+
+
+
+    public void exporttxt(Context context, String namafile, StringBuilder isi)
+    {
+        try {
+
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED) {
+                // Do the file write
+                String path= context.getFilesDir().getAbsolutePath();
+//            String pth= Environment.getExternalStoragePublicDirectory();
+                File root = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS),"Encryptions");
+//                root.mkdir();
+                //awalnya file rooth pake path
+                Log.d("TAG", "generateNoteOnSD: "+root);
+                root.mkdirs();
+
+                if (!root.exists()) {
+                    root.mkdirs();
+                }
+                else
+                {
+                    Log.d("TAG", "generateNoteOnSD already exist: "+root);
+                    File gpxfile = new File(root, namafile);
+                    FileWriter writer = new FileWriter(gpxfile);
+                    Log.d("TAG", "generateNoteOnSD: "+root);
+
+                    writer.append(isi);
+                    writer.flush();
+                    writer.close();
+                }
+                File gpxfile = new File(root, namafile);
+                FileWriter writer = new FileWriter(gpxfile);
+                Log.d("TAG", "generateNoteOnSD: "+root);
+
+                writer.append(isi);
+                writer.flush();
+                writer.close();
+//                Toast.makeText(context, "Saved", Toast.LENGTH_SHORT).show();
+
+            } else {
+                // Request permission from the user
+                ActivityCompat.requestPermissions(this,
+                        new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, 0);
+
+            }
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+    }
+
+
+
+
+    private class MyAsyncTasks extends AsyncTask<Void, Void, Void> {
+        ProgressDialog pdLoading = new ProgressDialog(encoding.this);
+
+        @Override
+        protected void onPreExecute() {
+            progressDialog = new ProgressDialog(encoding.this);
+            progressDialog.setMessage("Please Wait");
+            progressDialog.setCancelable(false);
+            progressDialog.show();
+        }
+
+        @RequiresApi(api = Build.VERSION_CODES.O)
+        @Override
+        protected Void doInBackground(Void... voids) {
+            try {
+
+                mods=1;
+//                    starttume=0;
+//                    endtime=0;
+//                    duration=0;
+                akhir=null;
+                psnrs=null;
+                chiper="";
+                kunci="";
+                path="";
+                pltext="";
+                fname="";
+                starttume=System.nanoTime();
+
+                Encodeprocessing(mods);
+//                    endtime=System.nanoTime();
+//                    duration=endtime-starttume;
+//                    akhir=(double) duration/1000000000;
+
+
+
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+            return null;
+        }
+
+        @Override
+        protected void onPostExecute(Void unused) {
+            progressDialog.dismiss();
+
+        }
+
+    }
 
 
 }

@@ -391,9 +391,9 @@ public class decoding extends AppCompatActivity implements View.OnClickListener 
             if (mods !=2) {
                 try {
                     MessageDigest digest = MessageDigest.getInstance(SHA);
-//                digest.update(kuncis.getBytes());
-                    data = AES.StringkeByteArray(kuncis);
-                    digest.update(data, 0, data.length);
+                    digest.update(kuncis.getBytes());
+//                    data = Util.StringkeByteArray(kuncis);
+//                    digest.update(data, 0, data.length);
 //            Log.d("TAG", "hasil: "+AES.static_stringToByteArray(textkey));
 //            Log.d("TAG", "hasilupdat: "+dataBytes);
 //            Log.d("TAG", "hasilmd: "+digest.digest());
@@ -475,11 +475,18 @@ public class decoding extends AppCompatActivity implements View.OnClickListener 
 
 //                Log.d("TAG", "hasials: : "+hasil);
 //                txtResult.setText(hasil);
-                txtResult.setText(output);
-                Toast.makeText(getApplicationContext(), "Decode Finished", Toast.LENGTH_LONG).show();
-                status = "Decode Finished";
 
+            runOnUiThread(new Runnable() {
+                public void run() {
+                    // runs on UI thread
+                    txtResult.setText(output);
 
+                    Toast.makeText(getApplicationContext(), "Decode Finished", Toast.LENGTH_LONG).show();
+                    //startActivity(new Intent(this, MainActivity.class));
+                    status = "Decode berhasil";
+
+                }
+            });
 
 
         }
@@ -601,6 +608,13 @@ public class decoding extends AppCompatActivity implements View.OnClickListener 
     private class MyAsyncTasks extends AsyncTask<Void, Void, Void>{
         ProgressDialog pdLoading = new ProgressDialog(decoding.this);
 
+        @Override
+        protected void onPreExecute() {
+            progressDialog = new ProgressDialog(decoding.this);
+            progressDialog.setMessage("Please Wait");
+            progressDialog.setCancelable(false);
+            progressDialog.show();
+        }
 
         @RequiresApi(api = Build.VERSION_CODES.O)
         @Override
@@ -626,12 +640,14 @@ public class decoding extends AppCompatActivity implements View.OnClickListener 
 
         @Override
         protected void onPostExecute(Void unused) {
+
             endtime=System.nanoTime();
             duration=endtime-starttume;
             akhir=(double) duration/1000000000;
             dbHelper.addDecodeAES(path,fname,pltext,kunci,chiper,akhir);
             if (modsa==2)
                 dbHelper.addDecodeOnly(path,fname,pltext,akhir);
+            progressDialog.dismiss();
 
         }
 
