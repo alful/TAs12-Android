@@ -108,6 +108,13 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
 
         }
 
+//        else if (id == R.id.EmbedDecod) {
+//
+//            Intent intent1  = new Intent(this, EmbedExtract.class);
+//            startActivity(intent1);
+//
+//        }
+
 
         DrawerLayout drawer = (DrawerLayout) findViewById(R.id.lay_draw);
         drawer.closeDrawer(GravityCompat.START);

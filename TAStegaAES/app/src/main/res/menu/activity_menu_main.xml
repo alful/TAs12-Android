@@ -11,6 +11,11 @@
             android:icon="@android:drawable/ic_partial_secure"
             android:title="Extraction" />
 
+<!--        <item-->
+<!--            android:id="@+id/EmbedDecod"-->
+<!--            android:icon="@android:drawable/ic_partial_secure"-->
+<!--            android:title="EmbedDEcode" />-->
+
     </group>
 
 

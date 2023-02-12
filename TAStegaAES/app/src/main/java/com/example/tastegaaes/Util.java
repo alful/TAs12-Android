@@ -19,6 +19,12 @@ public class Util {
             int bit2=Byte.toUnsignedInt(arr2[i]);
             beda+=Integer.bitCount(bit1^bit2);
         }
+//        if (arr1.length!=arr2.length)
+//        {
+//            int pjgs=arr2.length-arr1.length;
+//            pjgs=pjgs*8;
+//            beda=pjgs+beda;
+//        }
         return beda;
     }
 
@@ -59,9 +65,9 @@ public class Util {
         for (int i = 0; i < arr.length; i++) {
             if ((0xff & arr[i]) < 0x10) {
                 hexString.append("0"
-                        + Integer.toHexString((0xFF & arr[i])));
+                        + Integer.toHexString((0xFF & arr[i]))+",");
             } else {
-                hexString.append(Integer.toHexString(0xFF & arr[i])).append("");
+                hexString.append(Integer.toHexString(0xFF & arr[i])).append(",");
             }
         }
         res=hexString.toString();
@@ -76,7 +82,7 @@ public class Util {
         char[] chars = input.toCharArray();
         for (char aChar : chars) {
             result.append(
-                    String.format("%8s", Integer.toBinaryString(aChar))   // char -> int, auto-cast
+                    String.format("%8s", Integer.toBinaryString(aChar))   // char -> int
                             .replaceAll(" ", "0")                         // zero pads
             );
         }
@@ -85,7 +91,7 @@ public class Util {
     }
 
     @RequiresApi(api = Build.VERSION_CODES.N)
-    public static String prettyBinary(String binary, int blockSize, String separator) {
+    public static String rapikanBiner(String binary, int blockSize, String separator) {
 
         List<String> result = new ArrayList<>();
         int index = 0;
@@ -123,4 +129,21 @@ public class Util {
 
     }
 
+
+    public static String BytekeHex(byte arr)
+    {
+        int as;
+        as=arr&0xFF;
+        String res;
+        res= ""+Integer.toHexString(as)+", ";
+
+        return res;
+
+    }
+
+    public static String InHex(int i)
+    {
+        String hexs=Integer.toHexString(i);
+        return hexs;
+    }
 }

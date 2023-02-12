@@ -319,7 +319,7 @@ public class decoding extends AppCompatActivity implements View.OnClickListener 
                 Log.d("TAG", "hskl: : "+hasilExtract);
 
 //                String sb = mod.binertostring(hasilExtract);
-            String sb=prettyBinary(hasilExtract,8," ");
+            String sb=Util.rapikanBiner(hasilExtract,8," ");
             Log.d("TAG", "Pretty: "+sb);
             String[] parts = sb.split(" ");
             StringBuilder asb = new StringBuilder();

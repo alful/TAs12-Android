@@ -16,40 +16,32 @@ public class Module {
     double meanSquaredError=0.0;
     double meanSquaredErrors=0.0;
     public String binertoeightbiner(String biner){
-        // biner pixel 8
         String nol = "0";
         int a = biner.length();
         for (int k = 0; k < 8-a; k++){
             biner = nol.concat(biner);
         }
-//        Log.d("TAG", "binertoeightbiner: "+biner);
         return biner;
     }
 
     public Integer binertointeger (String biner) {
-        //biner ke int
         char[] numbers = biner.toCharArray();
         Integer hasil =0;
         int count = 0;
-//        Log.d("TAG", "numbsr: "+numbers.length);
 
         for (int i = numbers.length - 1; i >= 0; i--) {
-//            Log.d("TAG", "not1w "+i+": "+numbers[i]);
 
             if (numbers[i] == '1'){
                 hasil += (int) Math.pow(2, count);
-//                Log.d("TAG", "binertointeger: "+hasil);
             }
             count++;
         }
-//        Log.d("TAG", "binint: "+hasil);
 
         return hasil;
     }
 
 
     public String stringtobiner (String psn){
-        //mengubah dari string ke binary
 
         StringBuilder result = new StringBuilder();
         char[] chars = psn.toCharArray();
@@ -129,7 +121,7 @@ public class Module {
 
     public int sumlsb(Bitmap image){
         //total semua lsb yang tersedia
-        int sumlsb = (image.getHeight()*image.getWidth());
+        int sumlsb = (image.getHeight()*image.getWidth())*3;
 
         return sumlsb;
     }

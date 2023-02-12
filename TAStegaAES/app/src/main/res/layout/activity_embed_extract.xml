@@ -1,0 +1,215 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    tools:context=".EmbedExtract">
+
+    <ScrollView
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content">
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="20dp">
+
+            <TextView
+                android:id="@+id/textView"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Embedding Extraction"
+                android:textColor="@color/black"
+                android:textSize="25sp"
+                android:layout_marginBottom="20dp"/>
+
+            <Button
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="CHOOSE IMAGE"
+                android:id="@+id/ChooseImgg"
+                android:clickable="true"
+                android:elegantTextHeight="false"
+                android:enabled="true"
+                android:longClickable="false" />
+
+            <ImageView
+                android:id="@+id/ivImageEncodeg"
+                android:layout_width="fill_parent"
+                android:layout_height="match_parent"
+                android:layout_above="@+id/TextEncodeg"
+
+                android:layout_below="@+id/ChooseImgg"
+                android:layout_alignParentStart="true"
+                android:layout_alignParentLeft="true"
+                android:background="@android:drawable/alert_light_frame" />
+
+
+            <android.support.design.widget.TextInputLayout
+                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="5dp"
+                android:hint="Isi pesan">
+
+                <android.support.design.widget.TextInputEditText
+                    android:id="@+id/TextEncodeg"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:drawablePadding="12dp"
+                    android:autoText="false"
+                    android:inputType="textMultiLine"
+                    android:longClickable="true"
+                    android:singleLine="false" />
+            </android.support.design.widget.TextInputLayout>
+
+            <android.support.design.widget.TextInputLayout
+                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="5dp"
+                android:hint="Key">
+
+                <android.support.design.widget.TextInputEditText
+                    android:id="@+id/EncodeKeyg"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:drawablePadding="12dp"
+                    android:autoText="false"
+                    android:inputType="textMultiLine"
+                    android:longClickable="true"
+                    android:singleLine="false" />
+            </android.support.design.widget.TextInputLayout>
+
+
+
+            <Button
+                android:id="@+id/EncodeProcg"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:clickable="true"
+                android:elegantTextHeight="false"
+                android:enabled="true"
+                android:longClickable="false"
+                android:text="EMBEDDING" />
+
+            <Button
+                android:id="@+id/EncodeOnlyg"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:clickable="true"
+                android:elegantTextHeight="false"
+                android:enabled="true"
+                android:longClickable="false"
+                android:visibility="gone"
+                android:text="Only Stegano" />
+            <Button
+                android:id="@+id/resetg"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:clickable="true"
+                android:elegantTextHeight="false"
+                android:enabled="true"
+                android:longClickable="false"
+                android:text="Reset" />
+
+
+
+
+            <TextView
+                android:id="@+id/textViewh"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Extraction"
+                android:textColor="@color/black"
+                android:textSize="25sp"
+                android:layout_marginBottom="20dp"
+                />
+            <ImageView
+                android:id="@+id/ivImageDecodeh"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:layout_alignParentStart="true"
+                android:layout_alignParentLeft="true"
+                android:background="@android:drawable/alert_light_frame" />
+
+            <android.support.design.widget.TextInputLayout
+                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="5dp"
+                android:hint="Key">
+
+                <android.support.design.widget.TextInputEditText
+                    android:id="@+id/DecodeKeyh"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:drawablePadding="12dp"
+                    android:inputType="textMultiLine"
+                    android:editable="false"
+                    android:autoText="false"
+                    android:longClickable="true"
+                    android:visibility="visible"
+                    android:singleLine="false"
+                    />
+            </android.support.design.widget.TextInputLayout>
+
+            <android.support.design.widget.TextInputLayout
+                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="5dp"
+                android:hint="Isi pesan">
+
+                <android.support.design.widget.TextInputEditText
+                    android:id="@+id/TextDecodeh"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:drawablePadding="12dp"
+                    android:inputType="textMultiLine"
+                    android:editable="false"
+                    android:autoText="false"
+                    android:longClickable="true"
+                    android:visibility="visible"
+                    android:singleLine="false"
+                    />
+            </android.support.design.widget.TextInputLayout>
+
+
+
+            <Button
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="EXTRACTION"
+                android:id="@+id/DecodeProcessh"
+                android:clickable="true"
+                android:elegantTextHeight="false"
+                android:enabled="true"
+                android:longClickable="false" />
+
+
+            <Button
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Only Decode Stegano"
+                android:id="@+id/DecodeSteganoOnlyh"
+                android:clickable="true"
+                android:elegantTextHeight="false"
+                android:enabled="true"
+                android:visibility="gone"
+                android:longClickable="false" />
+            <Button
+                android:id="@+id/dreseth"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:clickable="true"
+                android:elegantTextHeight="false"
+                android:enabled="true"
+                android:longClickable="false"
+                android:text="Reset" />
+
+        </LinearLayout>
+    </ScrollView>
+</LinearLayout>

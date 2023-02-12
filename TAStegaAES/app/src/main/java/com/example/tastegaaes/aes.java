@@ -18,11 +18,15 @@ public class aes {
     //kunci dekripsi round
     byte[][] dekripkunci;
 
+    static public String cekDat = "";
+    static public String cekKey = "";
+    static int ceks=0;
+
 
     // generator plinomial  GF(2^8)
     public static final int panjang = 4, kolom = sizeblock / panjang, gen_poli = 0x11B;
 
-    //     AES S-box hex ke dec. dilakukan dengan mencari panjang array ke ...
+    //     AES S-box hexadesi ke desima. dilakukan dengan mencari panjang array ke ...
     static final int[] Sbox = {
             //0     1    2      3     4    5     6     7      8    9     A      B    C     D     E     F
             0x63, 0x7c, 0x77, 0x7b, 0xf2, 0x6b, 0x6f, 0xc5, 0x30, 0x01, 0x67, 0x2b, 0xfe, 0xd7, 0xab, 0x76,
@@ -66,7 +70,7 @@ public class aes {
 
 
 
-//    AES Rcon key expansion
+//    AES Rcon
     static final int[] rcon = {
         0x8d, 0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80, 0x1b, 0x36, 0x6c, 0xd8,
         0xab, 0x4d, 0x9a, 0x2f, 0x5e, 0xbc, 0x63, 0xc6, 0x97, 0x35, 0x6a, 0xd4, 0xb3,
@@ -128,6 +132,9 @@ public class aes {
         for (i=0;i<sizeblock;i++) {
             a[i] = (byte)(state[i] ^ Ker[i]);
         }
+
+        cekDat+=" R"+round+"(Key = "+Util.ByteArrkeHex(Ker)+")ARK= "+Util.ByteArrkeHex(a);
+
         return (a);
     }
     public byte[] SubBytes(byte[] state, int round)
@@ -137,6 +144,8 @@ public class aes {
 
         for (i = 0; i < sizeblock; i++)
             tempa[i] = (byte) Sbox[state[i] & 0xFF];
+
+        cekDat+=" R"+round+":SB= "+Util.ByteArrkeHex(tempa);
 
         return (tempa);
     }
@@ -150,6 +159,8 @@ public class aes {
             a[i] = state[k];
 
         }
+        cekDat+=" R"+round+":SR= "+Util.ByteArrkeHex(a);
+
         return (a);
     }
     public byte[] MixColumn(byte[] state, int round)
@@ -158,12 +169,13 @@ public class aes {
         int i, col;
 
         for (col = 0; col < kolom; col++) {
-            i = col * panjang;        // index col -> ngecasting hex ke desimal
+            i = col * panjang;        // index kolom -> ngecasting hex ke desimal
             tempa[i]   = (byte)(kali(0x02,state[i]) ^ kali(0x03,state[i+1]) ^ state[i+2] ^ state[i+3]);
             tempa[i+1] = (byte)(state[i] ^ kali(0x02,state[i+1]) ^ kali(0x03,state[i+2]) ^ state[i+3]);
             tempa[i+2] = (byte)(state[i] ^ state[i+1] ^ kali(0x02,state[i+2]) ^ kali(0x03,state[i+3]));
             tempa[i+3] = (byte)(kali(0x03,state[i]) ^ state[i+1] ^ state[i+2] ^ kali(0x02,state[i+3]));
         }
+        cekDat+=" R"+round+":MC= "+Util.ByteArrkeHex(tempa);
 
         return (tempa);
     }
@@ -173,8 +185,11 @@ public class aes {
         byte [] a = new byte[sizeblock];
         byte [] tempa = new byte[sizeblock];
         //teks asli dijadikan sebuah state dan XOR dengan ADDROUNDKEY // -> (byte) nanti jd hexa
+        cekDat=" EnkrAES : ("+Util.ByteArrkeHex(teksasli)+")";
+
         a=AddroundKey(teksasli,0,0);
         // Looping untuk Round 1 - min terakhir karena round akhir tidak pakai mix
+
         for (int r = 1; r < pakairounds; r++) {
             //kunci yang dipakai
             // SubBytes dengan S-Box  //masking
@@ -195,6 +210,8 @@ public class aes {
 
         // AddRoundKey
         a=AddroundKey(tempa,pakairounds,0);
+
+        System.out.println(cekDat);
         return (a);
     }
 
@@ -211,6 +228,8 @@ public class aes {
 
         for (i = 0; i < sizeblock; i++)
             tempa[i] = (byte) inversSbox[state[i] & 0xFF];
+
+        cekDat+=" Round "+round+" : InvSubBytes = "+Util.ByteArrkeHex(tempa);
 
         return (tempa);
     }
@@ -230,6 +249,8 @@ public class aes {
 //                Log.d("TAG", "enkrpsishift: "+a[i]);
 
         }
+        cekDat+=" Round "+round+" : InvShiftRows = "+Util.ByteArrkeHex(tempa);
+
         return (tempa);
     }
 
@@ -239,12 +260,14 @@ public class aes {
         int i, col;
 
         for (col = 0; col < kolom; col++) {
-            i = col * panjang;        // start index col
+            i = col * panjang;        // start index kolom
             a[i]   = (byte)(kali(0x0e,state[i]) ^ kali(0x0b,state[i+1]) ^ kali(0x0d,state[i+2]) ^ kali(0x09,state[i+3]));
             a[i+1] = (byte)(kali(0x09,state[i]) ^ kali(0x0e,state[i+1]) ^ kali(0x0b,state[i+2]) ^ kali(0x0d,state[i+3]));
             a[i+2] = (byte)(kali(0x0d,state[i]) ^ kali(0x09,state[i+1]) ^ kali(0x0e,state[i+2]) ^ kali(0x0b,state[i+3]));
             a[i+3] = (byte)(kali(0x0b,state[i]) ^ kali(0x0d,state[i+1]) ^ kali(0x09,state[i+2]) ^ kali(0x0e,state[i+3]));
         }
+
+        cekDat+=" Round "+round+" : InvMixColumns = "+Util.ByteArrkeHex(a);
 
         return (a);
     }
@@ -254,6 +277,7 @@ public class aes {
         byte [] a = new byte[sizeblock];
         byte [] tempa = new byte[sizeblock];
 
+        cekDat="Dekripsi AES : ( "+Util.ByteArrkeHex(chiper)+" )";
 
 
         // chiper jadikan state XOR addroundkey
@@ -282,6 +306,7 @@ public class aes {
         tempa=AddroundKey(a,pakairounds,1);
 
 
+        System.out.println(cekDat);
         return (tempa);
     }
 
@@ -305,6 +330,7 @@ public class aes {
         // array utk kunci enkripsi dan dekrpsi
         enkripsikunci = new byte[pakairounds + 1][sizeblock];
         dekripkunci = new byte[pakairounds + 1][sizeblock];
+
         // kunci ke array
         for (i=0, j=0; i < Nk; i++) {
             w0[i] = key[j++];
@@ -312,21 +338,34 @@ public class aes {
             w2[i] = key[j++];
             w3[i] = key[j++];
         }
-        System.out.println("Key Asli = "+Util.ByteArrkeHex(key));
-
+//        System.out.println("Key Asli = "+Util.ByteArrkeHex(key));
+        if (ceks>0) {
+            cekKey="Key ( "+Util.ByteArrkeHex(key)+" )";
+            cekKey += " W0 (Key= " + Util.ByteArrkeHex(w0) + " )" + System.lineSeparator();
+            cekKey += " W1 (Key= " + Util.ByteArrkeHex(w1) + " )" + System.lineSeparator();
+            cekKey += " W2 (Key= " + Util.ByteArrkeHex(w2) + " )" + System.lineSeparator();
+            cekKey += " W3 (Key= " + Util.ByteArrkeHex(w3) + " )" + System.lineSeparator();
+        }
         // key Expansion
         byte t0, t1, t2, t3, old0;
         for (i = Nk; i < R_KEY; i++) {
             t0 = w0[i-1];
             t1 = w1[i-1];
             t2 = w2[i-1];
-            t3 = w3[i-1];    // temp = w[i-1]
+            t3 = w3[i-1];    // tempor = w[i-1]
             if (i % Nk == 0) {
                 old0 = t0;            // t0 utk t3 Sbox
                 t0 = (byte)(Sbox[t1 & 0xFF] ^ rcon[(i/Nk)]);    //  XOR konstan byte awal
                 t1 = (byte)(Sbox[t2 & 0xFF]);
-                t2 = (byte)(Sbox[t3 & 0xFF]);    // RotWord dengan reorder bytes yg sudah dipakai
-                t3 = (byte)(Sbox[old0 & 0xFF]);
+                t2 = (byte)(Sbox[t3 & 0xFF]);
+                t3 = (byte)(Sbox[old0 & 0xFF]);// RotasiWord dengan reorder bytes yg sudah dipakai
+                if (ceks>0) {
+
+                    cekKey += " Rot Sbox Rcon (Key= " + Util.BytekeHex(t0) + " )" + System.lineSeparator();
+                    cekKey += " Rot Sbox Rcon (Key= " + Util.BytekeHex(t1) + " )" + System.lineSeparator();
+                    cekKey += " Rot Sbox Rcon (Key= " + Util.BytekeHex(t2) + " )" + System.lineSeparator();
+                    cekKey += " Rot Sbox Rcon (Key= " + Util.BytekeHex(t3) + " )" + System.lineSeparator();
+                }
             }
             else if (i % Nk == 4) {
                 // temp = SubWord(temp)
@@ -334,16 +373,30 @@ public class aes {
                 t1 = (byte) Sbox[t1 & 0xFF];
                 t2 = (byte) Sbox[t2 & 0xFF];
                 t3 = (byte) Sbox[t3 & 0xFF];
+                if (ceks>0) {
+
+                    cekKey += " Rot Sbox Rcon If (Key= " + Util.BytekeHex(t0) + " )" + System.lineSeparator();
+                    cekKey += " Rot Sbox Rcon If (Key= " + Util.BytekeHex(t1) + " )" + System.lineSeparator();
+                    cekKey += " Rot Sbox Rcon If (Key= " + Util.BytekeHex(t2) + " )" + System.lineSeparator();
+                    cekKey += " Rot Sbox Rcon If (Key= " + Util.BytekeHex(t3) + " )" + System.lineSeparator();
+                }
             }
             // w[i] = w[i-Nk] ^ temp
             w0[i] = (byte)(w0[i-Nk] ^ t0);
             w1[i] = (byte)(w1[i-Nk] ^ t1);
             w2[i] = (byte)(w2[i-Nk] ^ t2);
             w3[i] = (byte)(w3[i-Nk] ^ t3);
+            if (ceks>0) {
+
+                cekKey += " Xor (Key= " + Util.ByteArrkeHex(w0) + " )" + System.lineSeparator();
+                cekKey += " Xor (Key= " + Util.ByteArrkeHex(w1) + " )" + System.lineSeparator();
+                cekKey += " Xor (Key= " + Util.ByteArrkeHex(w2) + " )" + System.lineSeparator();
+                cekKey += " Xor (Key= " + Util.ByteArrkeHex(w3) + " )" + System.lineSeparator();
+            }
         }
-        // hasil expansion dimasukkan ke kunci enkripsi/dekripsi
-        for (r = 0, i = 0; r < pakairounds + 1; r++) {    // utk round
-            for (j = 0; j < Block; j++) {        // utk tiap huruf pada round yang dibutukan
+
+        for (r = 0, i = 0; r < pakairounds + 1; r++) {
+            for (j = 0; j < Block; j++) {
                 enkripsikunci[r][4*j] = w0[i];
                 enkripsikunci[r][4*j+1] = w1[i];
                 enkripsikunci[r][4*j+2] = w2[i];
@@ -354,8 +407,13 @@ public class aes {
                 dekripkunci[pakairounds - r][4*j+3] = w3[i];
                 i++;
             }
-            System.out.println("Key Expansion Round Ke-"+r+" = "+Util.ByteArrkeHex(enkripsikunci[r]));
+            System.out.println("Key Expansion Encrytpion Round Ke-"+r+" = "+Util.ByteArrkeHex(enkripsikunci[r]));
+            System.out.println("Key Expansion Decrytpion Round Ke-"+(pakairounds-r)+" = "+Util.ByteArrkeHex(dekripkunci[pakairounds - r]));
+
         }
+
+        System.out.println(cekKey);
+
     }
 
 
@@ -397,7 +455,23 @@ public class aes {
 
     public String Encrypt(String data) {
         Log.d("TAG", "Esasa: "+data.length());
-
+//        int i=0,j=0;
+//
+//        System.out.print("Hasil_akhir[] = n");
+//        for (i = 0; i < 32; i++) {
+//            for (j = 0; j < 8; j++) {
+//                System.out.print(Util.InHex(hasil_akhir[i * 8 + j]) + ", ");
+//            }
+//            System.out.println();
+//        }
+//
+//        System.out.print("perpangkatan[] = n");
+//        for (i = 0; i < 32; i++) {
+//            for (j = 0; j < 8; j++) {
+//                System.out.print(Util.InHex(perpangkatan[i * 8 + j]) + ", ");
+//            }
+//            System.out.println();
+//        }
 //        while((data.length() % 32) != 0)
 //            data += " ";
         Log.d("TAG", "Esasad: "+data.length());
